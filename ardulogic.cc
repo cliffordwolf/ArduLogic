@@ -19,20 +19,55 @@
  *
  */
 
-#ifndef ARDULOGIC_H
-#define ARDULOGIC_H
+#include "ardulogic.h"
 
-#define TOTAL_PIN_NUM 32
+#include <errno.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
 
-#define PIN_MONITOR		0x01
-#define PIN_TRIGGER_POSEDGE	0x02
-#define PIN_TRIGGER_NEGEDGE	0x04
+int pins[TOTAL_PIN_NUM];
 
-extern int pins[TOTAL_PIN_NUM];
+void help(const char *progname)
+{
+	fprintf(stderr, "Usage: %s [-p] [-t <dev>] <configfile> <vcdfile>\n", progname);
+	exit(1);
+}
 
-void config(const char *file);
-void genfirmware(const char *file);
-void readdata(const char *tts);
-void writevcd(const char *file);
+int main(int argc, char **argv)
+{
+	int opt;
+	const char *ttydev = "/dev/ttyACM0";
+	int programm_arduino = 0;
 
-#endif
+	while ((opt = getopt(argc, argv, "pt:")) != -1) {
+		switch (opt) {
+		case 'p':
+			programm_arduino = 1;
+			break;
+		case 't':
+			ttydev = optarg;
+			break;
+		default:
+			help(argv[0]);
+		}
+	}
+
+	if (optind != argc-2)
+		help(argv[0]);
+
+	config(argv[optind]);
+
+	if (programm_arduino) {
+		genfirmware(".ardulogic_tmp.firmware.c");
+		system("avr-gcc ...");
+		system("avrdude ...");
+		remove(".ardulogic_tmp.firmware.c");
+	}
+
+	readdata(ttydev);
+	writevcd(argv[optind+1]);
+
+	return 0;
+}

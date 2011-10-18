@@ -19,20 +19,10 @@
  *
  */
 
-#ifndef ARDULOGIC_H
-#define ARDULOGIC_H
+#include "ardulogic.h"
 
-#define TOTAL_PIN_NUM 32
+void writevcd(const char *file)
+{
+	/* FIXME */
+}
 
-#define PIN_MONITOR		0x01
-#define PIN_TRIGGER_POSEDGE	0x02
-#define PIN_TRIGGER_NEGEDGE	0x04
-
-extern int pins[TOTAL_PIN_NUM];
-
-void config(const char *file);
-void genfirmware(const char *file);
-void readdata(const char *tts);
-void writevcd(const char *file);
-
-#endif

@@ -2,7 +2,9 @@
 CXXFLAGS += -MD -Wall -Os -ggdb
 CXX = g++
 
-ardulogic: parser.o lexer.o
+LDLIBS += -lstdc++
+
+ardulogic: ardulogic.o parser.o lexer.o genfirmware.o readdata.o writevcd.o
 
 parser.cc parser.hh: parser.y
 	bison -o parser.cc -d parser.y

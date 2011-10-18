@@ -1,5 +1,5 @@
 /*
- *  ArduLogic - Low Speed Logic Analyzer using the Arduino HArdware
+ *  ArduLogic - Low Speed Logic Analyzer using the Arduino Hardware
  *
  *  Copyright (C) 2011  Clifford Wolf <clifford@clifford.at>
  *

@@ -1,5 +1,5 @@
 /*
- *  ArduLogic - Low Speed Logic Analyzer using the Arduino HArdware
+ *  ArduLogic - Low Speed Logic Analyzer using the Arduino Hardware
  *
  *  Copyright (C) 2011  Clifford Wolf <clifford@clifford.at>
  *
@@ -25,6 +25,8 @@
 #include <stdint.h>
 #include <list>
 
+#define PIN_A(__n) (__n)
+#define PIN_D(__n) (__n+4)
 #define TOTAL_PIN_NUM 12
 
 #define PIN_MONITOR		0x01

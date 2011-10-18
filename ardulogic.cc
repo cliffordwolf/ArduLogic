@@ -1,5 +1,5 @@
 /*
- *  ArduLogic - Low Speed Logic Analyzer using the Arduino HArdware
+ *  ArduLogic - Low Speed Logic Analyzer using the Arduino Hardware
  *
  *  Copyright (C) 2011  Clifford Wolf <clifford@clifford.at>
  *
@@ -67,9 +67,17 @@ int main(int argc, char **argv)
 
 	if (programm_arduino) {
 		genfirmware(".ardulogic_tmp.firmware.c");
-		system("avr-gcc ...");
-		system("avrdude ...");
+		setenv("ARDUINO_TTY", ttydev, 1);
+		int rc = system("set -x; avr-gcc -o .ardulogic_tmp.firmware.elf -mmcu=atmega328p -DF_CPU=16000000L .ardulogic_tmp.firmware.c");
+		rc = rc ?: system("set -x; avr-objcopy -j .text -j .data -O ihex .ardulogic_tmp.firmware.elf .ardulogic_tmp.firmware.hex");
+		rc = rc ?: system("set -x; avrdude -p m328p -b 115200 -c arduino -P \"$ARDUINO_TTY\" -v -U \"flash:w:.ardulogic_tmp.firmware.hex\"");
 		remove(".ardulogic_tmp.firmware.c");
+		remove(".ardulogic_tmp.firmware.elf");
+		remove(".ardulogic_tmp.firmware.hex");
+		if (rc) {
+			fprintf(stderr, "Error while compiling firmware or programming the arduino!\n");
+			exit(1);
+		}
 	}
 
 	readdata(ttydev);

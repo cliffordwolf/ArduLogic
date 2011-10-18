@@ -1,5 +1,5 @@
 /*
- *  ArduLogic - Low Speed Logic Analyzer using the Arduino HArdware
+ *  ArduLogic - Low Speed Logic Analyzer using the Arduino Hardware
  *
  *  Copyright (C) 2011  Clifford Wolf <clifford@clifford.at>
  *
@@ -21,8 +21,34 @@
 
 #include "ardulogic.h"
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <errno.h>
+
 void genfirmware(const char *file)
 {
-	/* FIXME */
+	int use_irq_trigger = 1;
+
+	for (int i = 0; i < TOTAL_PIN_NUM; i++) {
+		if (i == PIN_D(2) || i == PIN_D(3))
+			continue;
+		if ((pins[i] & (PIN_TRIGGER_POSEDGE|PIN_TRIGGER_NEGEDGE)) != 0)
+			use_irq_trigger = 0;
+	}
+
+	if (!use_irq_trigger)
+		printf("WARNING: IRQs are only used when all triggers are on D2 and/or D3!\n");
+
+	FILE *f = fopen(file, "w");
+	if (!f) {
+		fprintf(stderr, "Can't create firmware source file `%s': %s\n", file, strerror(errno));
+		exit(1);
+	}
+
+	// FIXME
+	fprintf(f, "int main() { return 0; }\n");
+
+	fclose(f);
 }
 

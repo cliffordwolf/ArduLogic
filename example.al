@@ -4,8 +4,8 @@
 ###
 trigger posedge D2
 trigger negedge D2
-monitor A0 A1 A2 A3 A4 A5
-monitor D2 D3 D4 D5 D6 D7
+capture A0 A1 A2 A3 A4 A5
+capture D2 D3 D4 D5 D6 D7
 
 ###
 ### Decode SPI Data

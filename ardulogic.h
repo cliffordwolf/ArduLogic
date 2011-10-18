@@ -29,7 +29,7 @@
 #define PIN_D(__n) (__n+4)
 #define TOTAL_PIN_NUM 12
 
-#define PIN_MONITOR		0x01
+#define PIN_CAPTURE		0x01
 #define PIN_TRIGGER_POSEDGE	0x02
 #define PIN_TRIGGER_NEGEDGE	0x04
 

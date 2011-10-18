@@ -33,13 +33,13 @@ static void gen_pack(FILE *f)
 	int idx = 0;
 
 	for (int i = PIN_A(0); i < PIN_D(2); i++) {
-		if ((pins[i] & PIN_MONITOR) == 0)
+		if ((pins[i] & PIN_CAPTURE) == 0)
 			continue;
 		int off = 16 + (idx++) - (i - PIN_A(0));
 		ashift[off] |= 1 << i;
 	}
 	for (int i = PIN_D(2); i < TOTAL_PIN_NUM; i++) {
-		if ((pins[i] & PIN_MONITOR) == 0)
+		if ((pins[i] & PIN_CAPTURE) == 0)
 			continue;
 		int off = 16 + (idx++) - (i - PIN_D(2) + 2);
 		dshift[off] |= 1 << (i - PIN_D(2) + 2);
@@ -95,7 +95,7 @@ void genfirmware(const char *file)
 	int num_bits = 0;
 
 	for (int i = 0; i < TOTAL_PIN_NUM; i++) {
-		if ((pins[i] & PIN_MONITOR) != 0)
+		if ((pins[i] & PIN_CAPTURE) != 0)
 			num_bits++;
 		if (i == PIN_D(2) || i == PIN_D(3))
 			continue;

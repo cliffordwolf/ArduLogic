@@ -43,8 +43,7 @@ D[2-7] {
 "trigger"	{ return TOK_TRIGGER; }
 "posedge"	{ return TOK_POSEDGE; }
 "negedge"	{ return TOK_NEGEDGE; }
-
-"monitor"	{ return TOK_MONITOR; }
+"capture"	{ return TOK_CAPTURE; }
 
 "decode"	{ return TOK_DECODE; }
 "spi"		{ return TOK_SPI; }

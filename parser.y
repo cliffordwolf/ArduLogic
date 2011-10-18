@@ -55,7 +55,7 @@ void yyerror (char const *s) {
 
 %token TOK_TRIGGER TOK_POSEDGE TOK_NEGEDGE
 %token TOK_DECODE TOK_SPI TOK_I2C TOK_JTAG
-%token TOK_MONITOR TOK_EOL
+%token TOK_CAPTURE TOK_EOL
 
 %type <num> edge neg
 
@@ -77,14 +77,14 @@ stmt_trigger:
 	};
 
 stmt_monitor:
-	TOK_MONITOR monitor_list;
+	TOK_CAPTURE capture_list;
 
-monitor_list:
-	monitor_list TOK_PIN {
-		pins[$2] |= PIN_MONITOR;
+capture_list:
+	capture_list TOK_PIN {
+		pins[$2] |= PIN_CAPTURE;
 	} |
 	TOK_PIN {
-		pins[$1] |= PIN_MONITOR;
+		pins[$1] |= PIN_CAPTURE;
 	};
 
 stmt_decode:
@@ -95,17 +95,17 @@ stmt_decode:
 		decode_config[CFG_SPI_MOSI]  = $7;
 		decode_config[CFG_SPI_MISO]  = $8;
 		pins[$4] |= $3; // SCK
-		pins[$5] |= PIN_MONITOR | PIN_TRIGGER_POSEDGE | PIN_TRIGGER_NEGEDGE; // CS
-		pins[$6] |= PIN_MONITOR; // MOSI
-		pins[$7] |= PIN_MONITOR; // MISO
+		pins[$5] |= PIN_CAPTURE | PIN_TRIGGER_POSEDGE | PIN_TRIGGER_NEGEDGE; // CS
+		pins[$6] |= PIN_CAPTURE; // MOSI
+		pins[$7] |= PIN_CAPTURE; // MISO
 		decode = DECODE_SPI;
 	} |
 	TOK_DECODE TOK_I2C TOK_PIN TOK_PIN {
 		check_decode(0);
 		decode_config[CFG_I2C_SCL] = $3;
 		decode_config[CFG_I2C_SDA] = $4;
-		pins[$3] |= PIN_MONITOR | PIN_TRIGGER_POSEDGE | PIN_TRIGGER_NEGEDGE; // SCL
-		pins[$4] |= PIN_MONITOR | PIN_TRIGGER_POSEDGE | PIN_TRIGGER_NEGEDGE; // SDA
+		pins[$3] |= PIN_CAPTURE | PIN_TRIGGER_POSEDGE | PIN_TRIGGER_NEGEDGE; // SCL
+		pins[$4] |= PIN_CAPTURE | PIN_TRIGGER_POSEDGE | PIN_TRIGGER_NEGEDGE; // SDA
 		decode = DECODE_I2C;
 	} |
 	TOK_DECODE TOK_JTAG TOK_PIN TOK_PIN TOK_PIN TOK_PIN {
@@ -114,9 +114,9 @@ stmt_decode:
 		decode_config[CFG_JTAG_TDI] = $5;
 		decode_config[CFG_JTAG_TDO] = $6;
 		pins[$3] |= PIN_TRIGGER_POSEDGE; // TCK
-		pins[$4] |= PIN_MONITOR; // TMS
-		pins[$5] |= PIN_MONITOR; // TDI
-		pins[$6] |= PIN_MONITOR; // TD0
+		pins[$4] |= PIN_CAPTURE; // TMS
+		pins[$5] |= PIN_CAPTURE; // TDI
+		pins[$6] |= PIN_CAPTURE; // TD0
 		decode = DECODE_JTAG;
 	};
 
@@ -160,7 +160,7 @@ void config(const char *file)
 		if (pins[i] == 0)
 			continue;
 		printf(" %s:", pin_names[i]);
-		if ((pins[i] & PIN_MONITOR) != 0)
+		if ((pins[i] & PIN_CAPTURE) != 0)
 			printf("c");
 		if ((pins[i] & PIN_TRIGGER_POSEDGE) != 0)
 			printf("p");

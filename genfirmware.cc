@@ -59,6 +59,36 @@ static void gen_pack(FILE *f)
 	fprintf(f, "}\n");
 }
 
+void gen_fifo(FILE *f, int num_bits)
+{
+	fprintf(f, "uint8_t fifo_data[256];\n");
+	fprintf(f, "uint8_t fifo_in = 0, fifo_out = 0, fifo_bits = 0;\n");
+	fprintf(f, "static inline bool fifo_empty() { return fifo_in == fifo_out; }\n");
+	fprintf(f, "static inline uint8_t fifo_shift() { return fifo_data[fifo_out++]; }\n");
+	fprintf(f, "static inline void fifo_next() {\n");
+	fprintf(f, "	while (fifo_in+1 == fifo_out) { __asm__ __volatile__ (\"\" ::: \"memory\"); }\n");
+	fprintf(f, "	fifo_data[++fifo_in] = 0;\n");
+	fprintf(f, "	fifo_bits = 8;\n");
+	fprintf(f, "}\n");
+	fprintf(f, "static inline void fifo_push(smplword_t w) {\n");
+	fprintf(f, "	uint8_t bits = %d;\n", num_bits);
+	fprintf(f, "	do {\n");
+	fprintf(f, "		uint8_t bc = bits > fifo_bits ? fifo_bits : bits;\n");
+	fprintf(f, "		fifo_data[fifo_in] |= w << (8-fifo_bits);\n");
+	fprintf(f, "		fifo_bits -= bc;\n");
+	fprintf(f, "		if (fifo_bits == 0)\n");
+	fprintf(f, "			fifo_next();\n");
+	fprintf(f, "		w = w >> bc;\n");
+	fprintf(f, "		bits -= bc;\n");
+	fprintf(f, "	} while (bits > 0);\n");
+	fprintf(f, "}\n");
+	fprintf(f, "static inline void fifo_close() {\n");
+	fprintf(f, "	while (fifo_in+1 == fifo_out) { __asm__ __volatile__ (\"\" ::: \"memory\"); }\n");
+	fprintf(f, "	fifo_data[++fifo_in] = fifo_bits;\n");
+	fprintf(f, "	fifo_next();\n");
+	fprintf(f, "}\n");
+}
+
 void genfirmware(const char *file)
 {
 	int use_irq_trigger = 1;
@@ -83,8 +113,10 @@ void genfirmware(const char *file)
 	}
 
 	fprintf(f, "#include <stdint.h>\n");
+	fprintf(f, "#include <stdbool.h>\n");
 	fprintf(f, "typedef uint%d_t smplword_t;\n", num_bits <= 8 ? 8 : 16);
 
+	gen_fifo(f, num_bits);
 	gen_pack(f);
 
 	// FIXME

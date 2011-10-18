@@ -41,7 +41,6 @@ D[2-7] {
 }
 
 "trigger"	{ return TOK_TRIGGER; }
-"on"		{ return TOK_ON; }
 "posedge"	{ return TOK_POSEDGE; }
 "negedge"	{ return TOK_NEGEDGE; }
 

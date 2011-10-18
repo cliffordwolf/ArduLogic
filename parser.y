@@ -53,9 +53,9 @@ void yyerror (char const *s) {
 
 %token <num> TOK_PIN
 
-%token TOK_TRIGGER TOK_ON TOK_POSEDGE TOK_NEGEDGE
-%token TOK_MONITOR TOK_DECODE TOK_SPI TOK_I2C TOK_JTAG
-%token TOK_EOL
+%token TOK_TRIGGER TOK_POSEDGE TOK_NEGEDGE
+%token TOK_DECODE TOK_SPI TOK_I2C TOK_JTAG
+%token TOK_MONITOR TOK_EOL
 
 %type <num> edge neg
 
@@ -70,14 +70,9 @@ stmt:
 	stmt_trigger | stmt_monitor | stmt_decode;
 
 stmt_trigger:
-	TOK_TRIGGER TOK_ON TOK_POSEDGE TOK_PIN {
+	TOK_TRIGGER edge TOK_PIN {
 		check_decode(DECODE_TRIGGER);
-		pins[$4] |= PIN_TRIGGER_POSEDGE;
-		decode = DECODE_TRIGGER;
-	} |
-	TOK_TRIGGER TOK_ON TOK_NEGEDGE TOK_PIN {
-		check_decode(DECODE_TRIGGER);
-		pins[$4] |= PIN_TRIGGER_NEGEDGE;
+		pins[$3] |= $2;
 		decode = DECODE_TRIGGER;
 	};
 
@@ -93,35 +88,35 @@ monitor_list:
 	};
 
 stmt_decode:
-	TOK_DECODE TOK_SPI neg TOK_PIN TOK_PIN TOK_PIN edge TOK_PIN {
+	TOK_DECODE TOK_SPI edge TOK_PIN neg TOK_PIN TOK_PIN TOK_PIN {
 		check_decode(0);
-		decode_config[CFG_SPI_CSNEG] = $3;
-		decode_config[CFG_SPI_CS]    = $4;
-		decode_config[CFG_SPI_MOSI]  = $5;
-		decode_config[CFG_SPI_MISO]  = $6;
-		pins[$4] |= PIN_MONITOR | PIN_TRIGGER_POSEDGE | PIN_TRIGGER_NEGEDGE; // CS
-		pins[$5] |= PIN_MONITOR; // MOSI
-		pins[$6] |= PIN_MONITOR; // MISO
-		pins[$8] |= $7; // SCK
+		decode_config[CFG_SPI_CSNEG] = $5;
+		decode_config[CFG_SPI_CS]    = $6;
+		decode_config[CFG_SPI_MOSI]  = $7;
+		decode_config[CFG_SPI_MISO]  = $8;
+		pins[$4] |= $3; // SCK
+		pins[$5] |= PIN_MONITOR | PIN_TRIGGER_POSEDGE | PIN_TRIGGER_NEGEDGE; // CS
+		pins[$6] |= PIN_MONITOR; // MOSI
+		pins[$7] |= PIN_MONITOR; // MISO
 		decode = DECODE_SPI;
 	} |
 	TOK_DECODE TOK_I2C TOK_PIN TOK_PIN {
 		check_decode(0);
-		decode_config[CFG_I2C_SDA] = $3;
-		decode_config[CFG_I2C_SCL] = $4;
-		pins[$3] |= PIN_MONITOR | PIN_TRIGGER_POSEDGE | PIN_TRIGGER_NEGEDGE; // SDA
-		pins[$4] |= PIN_MONITOR | PIN_TRIGGER_POSEDGE | PIN_TRIGGER_NEGEDGE; // SCL
+		decode_config[CFG_I2C_SCL] = $3;
+		decode_config[CFG_I2C_SDA] = $4;
+		pins[$3] |= PIN_MONITOR | PIN_TRIGGER_POSEDGE | PIN_TRIGGER_NEGEDGE; // SCL
+		pins[$4] |= PIN_MONITOR | PIN_TRIGGER_POSEDGE | PIN_TRIGGER_NEGEDGE; // SDA
 		decode = DECODE_I2C;
 	} |
 	TOK_DECODE TOK_JTAG TOK_PIN TOK_PIN TOK_PIN TOK_PIN {
 		check_decode(0);
-		decode_config[CFG_JTAG_TDI] = $3;
-		decode_config[CFG_JTAG_TDO] = $4;
-		decode_config[CFG_JTAG_TMS] = $5;
-		pins[$3] |= PIN_MONITOR; // TDI
-		pins[$4] |= PIN_MONITOR; // TD0
-		pins[$5] |= PIN_MONITOR; // TMS
-		pins[$6] |= PIN_TRIGGER_POSEDGE; // TCK
+		decode_config[CFG_JTAG_TMS] = $4;
+		decode_config[CFG_JTAG_TDI] = $5;
+		decode_config[CFG_JTAG_TDO] = $6;
+		pins[$3] |= PIN_TRIGGER_POSEDGE; // TCK
+		pins[$4] |= PIN_MONITOR; // TMS
+		pins[$5] |= PIN_MONITOR; // TDI
+		pins[$6] |= PIN_MONITOR; // TD0
 		decode = DECODE_JTAG;
 	};
 

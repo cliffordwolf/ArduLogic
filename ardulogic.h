@@ -44,12 +44,12 @@
 #define CFG_SPI_MOSI	2
 #define CFG_SPI_MISO	3
 
-#define CFG_I2C_SDA	0
-#define CFG_I2C_SCL	1
+#define CFG_I2C_SCL	0
+#define CFG_I2C_SDA	1
 
-#define CFG_JTAG_TDI	0
-#define CFG_JTAG_TDO	1
-#define CFG_JTAG_TMS	2
+#define CFG_JTAG_TMS	0
+#define CFG_JTAG_TDI	1
+#define CFG_JTAG_TDO	2
 
 #define CFG_WORDS	4
 

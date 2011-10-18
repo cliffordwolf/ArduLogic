@@ -27,7 +27,13 @@
 #include <string.h>
 #include <unistd.h>
 
+int decode;
+int decode_config[CFG_WORDS];
 int pins[TOTAL_PIN_NUM];
+const char *pin_names[TOTAL_PIN_NUM] = {
+	"A0", "A1", "A2", "A3", "A4", "A5",
+	"D2", "D3", "D4", "D5", "D6", "D7" };
+std::list<uint16_t> samples;
 
 void help(const char *progname)
 {

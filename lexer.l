@@ -30,9 +30,14 @@
 
 %%
 
-[0-9]+ {
-	yylval.num = atoi(yytext);
-	return TOK_NUM;
+A[0-5] {
+	yylval.num = yytext[1]-'0';
+	return TOK_PIN;
+}
+
+D[2-7] {
+	yylval.num = 6 + yytext[1]-'2';
+	return TOK_PIN;
 }
 
 "trigger"	{ return TOK_TRIGGER; }
@@ -50,6 +55,7 @@
 [\n\r]		{ return TOK_EOL; }
 "#"[^\n\r]*	/* comment */
 [\t ]		/* ignore whitespace*/
+.		{ return yytext[0]; }
 
 %%
 

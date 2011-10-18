@@ -22,13 +22,40 @@
 #ifndef ARDULOGIC_H
 #define ARDULOGIC_H
 
-#define TOTAL_PIN_NUM 32
+#include <stdint.h>
+#include <list>
+
+#define TOTAL_PIN_NUM 12
 
 #define PIN_MONITOR		0x01
 #define PIN_TRIGGER_POSEDGE	0x02
 #define PIN_TRIGGER_NEGEDGE	0x04
 
+#define DECODE_NONE	0
+#define DECODE_TRIGGER	1
+#define DECODE_SPI	2
+#define DECODE_I2C	3
+#define DECODE_JTAG	4
+
+#define CFG_SPI_CSNEG	0
+#define CFG_SPI_CS	1
+#define CFG_SPI_MOSI	2
+#define CFG_SPI_MISO	3
+
+#define CFG_I2C_SDA	0
+#define CFG_I2C_SCL	1
+
+#define CFG_JTAG_TDI	0
+#define CFG_JTAG_TDO	1
+#define CFG_JTAG_TMS	2
+
+#define CFG_WORDS	4
+
+extern int decode;
+extern int decode_config[CFG_WORDS];
 extern int pins[TOTAL_PIN_NUM];
+extern const char *pin_names[TOTAL_PIN_NUM];
+extern std::list<uint16_t> samples;
 
 void config(const char *file);
 void genfirmware(const char *file);

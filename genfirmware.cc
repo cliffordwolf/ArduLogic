@@ -26,11 +26,47 @@
 #include <string.h>
 #include <errno.h>
 
+static void gen_pack(FILE *f)
+{
+	uint8_t ashift[32] = { };
+	uint8_t dshift[32] = { };
+	int idx = 0;
+
+	for (int i = PIN_A(0); i < PIN_D(2); i++) {
+		if ((pins[i] & PIN_MONITOR) == 0)
+			continue;
+		int off = 16 + (idx++) - (i - PIN_A(0));
+		ashift[off] |= 1 << i;
+	}
+	for (int i = PIN_D(2); i < TOTAL_PIN_NUM; i++) {
+		if ((pins[i] & PIN_MONITOR) == 0)
+			continue;
+		int off = 16 + (idx++) - (i - PIN_D(2) + 2);
+		dshift[off] |= 1 << (i - PIN_D(2) + 2);
+	}
+
+	fprintf(f, "static inline smplword_t pack(uint8_t adata, uint8_t ddata) {\n");
+	fprintf(f, "	smplword_t w = 0;\n");
+	for (int i = 0; i < 32; i++) {
+		if (ashift[i])
+			fprintf(f, "	w |= (adata & 0x%02x) %s %d;\n",
+					ashift[i], i < 16 ? ">>" : "<<", abs(i - 16));
+		if (dshift[i])
+			fprintf(f, "	w |= (ddata & 0x%02x) %s %d;\n",
+					dshift[i], i < 16 ? ">>" : "<<", abs(i - 16));
+	}
+	fprintf(f, "	return w;\n");
+	fprintf(f, "}\n");
+}
+
 void genfirmware(const char *file)
 {
 	int use_irq_trigger = 1;
+	int num_bits = 0;
 
 	for (int i = 0; i < TOTAL_PIN_NUM; i++) {
+		if ((pins[i] & PIN_MONITOR) != 0)
+			num_bits++;
 		if (i == PIN_D(2) || i == PIN_D(3))
 			continue;
 		if ((pins[i] & (PIN_TRIGGER_POSEDGE|PIN_TRIGGER_NEGEDGE)) != 0)
@@ -45,6 +81,11 @@ void genfirmware(const char *file)
 		fprintf(stderr, "Can't create firmware source file `%s': %s\n", file, strerror(errno));
 		exit(1);
 	}
+
+	fprintf(f, "#include <stdint.h>\n");
+	fprintf(f, "typedef uint%d_t smplword_t;\n", num_bits <= 8 ? 8 : 16);
+
+	gen_pack(f);
 
 	// FIXME
 	fprintf(f, "int main() { return 0; }\n");

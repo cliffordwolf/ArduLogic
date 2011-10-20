@@ -61,12 +61,14 @@ static void gen_pack(FILE *f)
 
 void gen_fifo(FILE *f, int num_bits)
 {
+	fprintf(f, "static void serio_send();\n");
 	fprintf(f, "uint8_t fifo_data[256];\n");
 	fprintf(f, "uint8_t fifo_in = 0, fifo_out = 0, fifo_bits = 0;\n");
 	fprintf(f, "static inline bool fifo_empty() { return fifo_in == fifo_out; }\n");
 	fprintf(f, "static inline uint8_t fifo_shift() { return fifo_data[fifo_out++]; }\n");
 	fprintf(f, "static inline void fifo_next() {\n");
-	fprintf(f, "	while (fifo_in+1 == fifo_out) { __asm__ __volatile__ (\"\" ::: \"memory\"); }\n");
+	fprintf(f, "	while (fifo_in+1 == fifo_out)\n");
+	fprintf(f, "		serio_send();\n");
 	fprintf(f, "	fifo_data[++fifo_in] = 0;\n");
 	fprintf(f, "	fifo_bits = 8;\n");
 	fprintf(f, "}\n");
@@ -83,9 +85,45 @@ void gen_fifo(FILE *f, int num_bits)
 	fprintf(f, "	} while (bits > 0);\n");
 	fprintf(f, "}\n");
 	fprintf(f, "static inline void fifo_close() {\n");
-	fprintf(f, "	while (fifo_in+1 == fifo_out) { __asm__ __volatile__ (\"\" ::: \"memory\"); }\n");
+	fprintf(f, "	while (fifo_in+1 == fifo_out)\n");
+	fprintf(f, "		serio_send();\n");
 	fprintf(f, "	fifo_data[++fifo_in] = fifo_bits;\n");
 	fprintf(f, "	fifo_next();\n");
+	fprintf(f, "}\n");
+}
+
+void gen_serio(FILE *f)
+{
+	fprintf(f, "#define BAUD_RATE 115200\n");
+	fprintf(f, "static void serio_setup() {\n");
+	fprintf(f, "	// See AtMega168 Datasheet Table 19-12: 115200 baud @16MHz\n");
+	fprintf(f, "	UBRR0H = 0;\n");
+	fprintf(f, "	UBRR0L = 8;\n");
+	fprintf(f, "	UCSR0A = 0;\n");
+	fprintf(f, "	UCSR0B = _BV(RXEN0) | _BV(TXEN0);\n");
+	fprintf(f, "	UCSR0C = _BV(UCSZ00) | _BV(UCSZ01);\n");
+	fprintf(f, "	PORTD |= _BV(1);\n");
+	fprintf(f, "	DDRD |= _BV(1);\n");
+	fprintf(f, "}\n");
+	fprintf(f, "static void serio_send() {\n");
+	fprintf(f, "	if (fifo_in == fifo_out)\n");
+	fprintf(f, "		return;\n");
+	fprintf(f, "	if ((UCSR0A & _BV(UDRE0)) == 0)\n");
+	fprintf(f, "		return;\n");
+	fprintf(f, "	UDR0 = fifo_data[fifo_out++];\n");
+	fprintf(f, "}\n");
+	fprintf(f, "static void serio_break() {\n");
+	fprintf(f, "	uint32_t i;\n");
+	fprintf(f, "	UCSR0B &= ~_BV(TXEN0);\n");
+	fprintf(f, "	for (i = 0; i < 1000; i++)\n");
+	fprintf(f, "		sleep_cpu();\n");
+	fprintf(f, "	PORTD &= ~_BV(1);\n");
+	fprintf(f, "	for (i = 0; i < 1000; i++)\n");
+	fprintf(f, "		sleep_cpu();\n");
+	fprintf(f, "	PORTD |= _BV(1);\n");
+	fprintf(f, "	for (i = 0; i < 300; i++)\n");
+	fprintf(f, "		sleep_cpu();\n");
+	fprintf(f, "	UCSR0B |= _BV(TXEN0);\n");
 	fprintf(f, "}\n");
 }
 
@@ -114,13 +152,30 @@ void genfirmware(const char *file)
 
 	fprintf(f, "#include <stdint.h>\n");
 	fprintf(f, "#include <stdbool.h>\n");
+	fprintf(f, "#include <avr/io.h>\n");
+	fprintf(f, "#include <avr/sleep.h>\n");
 	fprintf(f, "typedef uint%d_t smplword_t;\n", num_bits <= 8 ? 8 : 16);
 
-	gen_fifo(f, num_bits);
 	gen_pack(f);
+	gen_fifo(f, num_bits);
+	gen_serio(f);
 
 	// FIXME
-	fprintf(f, "int main() { return 0; }\n");
+	fprintf(f, "int main() {\n");
+	fprintf(f, "	serio_setup();\n");
+	fprintf(f, "	serio_break();\n");
+	fprintf(f, "	fifo_data[fifo_in++] = 'H';\n");
+	fprintf(f, "	fifo_data[fifo_in++] = 'e';\n");
+	fprintf(f, "	fifo_data[fifo_in++] = 'l';\n");
+	fprintf(f, "	fifo_data[fifo_in++] = 'l';\n");
+	fprintf(f, "	fifo_data[fifo_in++] = 'o';\n");
+	fprintf(f, "	fifo_data[fifo_in++] = '\\r';\n");
+	fprintf(f, "	fifo_data[fifo_in++] = '\\n';\n");
+	fprintf(f, "	while (1) {\n");
+	fprintf(f, "		serio_send();\n");
+	fprintf(f, "	}\n");
+	fprintf(f, "	while (1) { }\n");
+	fprintf(f, "}\n");
 
 	fclose(f);
 }

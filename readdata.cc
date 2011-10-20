@@ -62,6 +62,7 @@ static unsigned char serialread()
 
 void readdata(const char *tts)
 {
+	printf("Connecting to Arduino on `%s'..\n", tts);
 	tts_name = tts;
 
 	fd = open(tts, O_RDWR);
@@ -69,6 +70,9 @@ void readdata(const char *tts)
 		fprintf(stderr, "Failed to open tts device `%s': %s\n", tts, strerror(errno));
 		exit(1);
 	}
+
+	// give the arduino some time to go thru it's reset hysteria
+	sleep(2);
 
 	tcgetattr(fd, &tcattr_old);
 	struct termios tcattr = tcattr_old;
@@ -79,11 +83,11 @@ void readdata(const char *tts)
 	cfsetspeed(&tcattr, B115200);
 	tcsetattr(fd, TCSAFLUSH, &tcattr);
 
-	printf("Waiting for Arduino on `%s': Please press the reset button.\n", tts);
+	printf("Please push the reset button on the Arduino.\n");
 
-	char header[32 + TOTAL_PIN_NUM] = "\377..ARDULOGIC:";
+	char header[32 + TOTAL_PIN_NUM] = "..ARDULOGIC:";
 	int hp = strlen(header);
-	header[1] = header[2] = 0;
+	header[0] = header[1] = 0;
 	for (int i = 0; i < TOTAL_PIN_NUM; i++)
 		header[hp++] = pins[i] + '0';
 	header[hp++] = ':';
@@ -97,28 +101,32 @@ void readdata(const char *tts)
 			idx = header[0] == ch ? 1 : 0;
 		else
 			idx++;
-		if (32 < ch && ch < 127)
-			printf("<%d:%c> @%d\n", ch, ch, idx);
-		else
-			printf("<%d> @%d\n", ch, idx);
 	}
 
 	printf("Recording. Press Ctrl-C to stop.\n");
 	sighandler_t old_hdl = signal(SIGINT, &sigint_hdl);
 
+	std::list<uint8_t> data;
 	for (idx = 0;; idx++)
 	{
 		unsigned char ch = serialread();
-		if (ch == 0377) {
+		if (ch == 0) {
 			ch = serialread();
-			if (ch == 0)
+			if (ch == 1)
 				break;
 		}
-		printf("<%d>\n", ch);
+		if ((ch & 0x80) == 0) {
+			fprintf(stderr, "Data encoding error on tts `%s'.\n", tts_name);
+			tcsetattr(fd, TCSAFLUSH, &tcattr_old);
+			exit(1);
+		}
+		data.push_back(ch);
 	}
 
-	printf("Recording finished. Got %d bytes tts payload.\n", idx);
+	printf("\rRecording finished. Got %d bytes tts payload.\n", idx);
 	signal(SIGINT, old_hdl);
+
+	// FIXME: Decode data
 
 	tcsetattr(fd, TCSAFLUSH, &tcattr_old);
 	close(fd);

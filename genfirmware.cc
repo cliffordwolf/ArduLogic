@@ -69,14 +69,14 @@ void gen_fifo(FILE *f, int num_bits)
 	fprintf(f, "static inline void fifo_next() {\n");
 	fprintf(f, "	while (fifo_in+1 == fifo_out)\n");
 	fprintf(f, "		serio_send();\n");
-	fprintf(f, "	fifo_data[++fifo_in] = 0;\n");
-	fprintf(f, "	fifo_bits = 8;\n");
+	fprintf(f, "	fifo_data[++fifo_in] = 0x80;\n");
+	fprintf(f, "	fifo_bits = 7;\n");
 	fprintf(f, "}\n");
 	fprintf(f, "static inline void fifo_push(smplword_t w) {\n");
 	fprintf(f, "	uint8_t bits = %d;\n", num_bits);
 	fprintf(f, "	do {\n");
 	fprintf(f, "		uint8_t bc = bits > fifo_bits ? fifo_bits : bits;\n");
-	fprintf(f, "		fifo_data[fifo_in] |= w << (8-fifo_bits);\n");
+	fprintf(f, "		fifo_data[fifo_in] |= w << (7-fifo_bits);\n");
 	fprintf(f, "		fifo_bits -= bc;\n");
 	fprintf(f, "		if (fifo_bits == 0)\n");
 	fprintf(f, "			fifo_next();\n");
@@ -87,7 +87,7 @@ void gen_fifo(FILE *f, int num_bits)
 	fprintf(f, "static inline void fifo_close() {\n");
 	fprintf(f, "	while (fifo_in+1 == fifo_out)\n");
 	fprintf(f, "		serio_send();\n");
-	fprintf(f, "	fifo_data[++fifo_in] = fifo_bits;\n");
+	fprintf(f, "	fifo_data[++fifo_in] = 0x80 | fifo_bits;\n");
 	fprintf(f, "	fifo_next();\n");
 	fprintf(f, "}\n");
 }
@@ -111,19 +111,6 @@ void gen_serio(FILE *f)
 	fprintf(f, "	if ((UCSR0A & _BV(UDRE0)) == 0)\n");
 	fprintf(f, "		return;\n");
 	fprintf(f, "	UDR0 = fifo_data[fifo_out++];\n");
-	fprintf(f, "}\n");
-	fprintf(f, "static void serio_break() {\n");
-	fprintf(f, "	uint32_t i;\n");
-	fprintf(f, "	UCSR0B &= ~_BV(TXEN0);\n");
-	fprintf(f, "	for (i = 0; i < 1000; i++)\n");
-	fprintf(f, "		sleep_cpu();\n");
-	fprintf(f, "	PORTD &= ~_BV(1);\n");
-	fprintf(f, "	for (i = 0; i < 1000; i++)\n");
-	fprintf(f, "		sleep_cpu();\n");
-	fprintf(f, "	PORTD |= _BV(1);\n");
-	fprintf(f, "	for (i = 0; i < 300; i++)\n");
-	fprintf(f, "		sleep_cpu();\n");
-	fprintf(f, "	UCSR0B |= _BV(TXEN0);\n");
 	fprintf(f, "}\n");
 }
 
@@ -160,17 +147,17 @@ void genfirmware(const char *file)
 	gen_fifo(f, num_bits);
 	gen_serio(f);
 
-	char header[32 + TOTAL_PIN_NUM] = "ARDULOGIC:";
+	char header[32 + TOTAL_PIN_NUM] = "..ARDULOGIC:";
 	int hp = strlen(header);
+	header[0] =  header[1] = 0;
 	for (int i = 0; i < TOTAL_PIN_NUM; i++)
 		header[hp++] = pins[i] + '0';
 	header[hp++] = ':';
 	header[hp++] = '\r';
 	header[hp++] = '\n';
-	
+
 	fprintf(f, "int main() {\n");
 	fprintf(f, "	serio_setup();\n");
-	fprintf(f, "	serio_break();\n");
 	for (int i = 0; i < hp; i++)
 		fprintf(f, "	fifo_data[fifo_in++] = 0x%02x;\n", header[i]);
 	fprintf(f, "	while ((UCSR0A & _BV(RXC0)) == 0) {\n");
@@ -178,8 +165,10 @@ void genfirmware(const char *file)
 	// FIXME -- Add actual capture logic here
 	fprintf(f, "	}\n");
 	fprintf(f, "	fifo_close();\n");
-	fprintf(f, "	serio_break();\n");
-	fprintf(f, "	while (1) { }\n");
+	fprintf(f, "	fifo_data[fifo_in++] = 0;\n");
+	fprintf(f, "	fifo_data[fifo_in++] = 1;\n");
+	fprintf(f, "	while (1)\n");
+	fprintf(f, "		serio_send();\n");
 	fprintf(f, "}\n");
 
 	fclose(f);

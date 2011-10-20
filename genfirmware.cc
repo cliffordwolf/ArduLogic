@@ -160,20 +160,25 @@ void genfirmware(const char *file)
 	gen_fifo(f, num_bits);
 	gen_serio(f);
 
-	// FIXME
+	char header[32 + TOTAL_PIN_NUM] = "ARDULOGIC:";
+	int hp = strlen(header);
+	for (int i = 0; i < TOTAL_PIN_NUM; i++)
+		header[hp++] = pins[i] + '0';
+	header[hp++] = ':';
+	header[hp++] = '\r';
+	header[hp++] = '\n';
+	
 	fprintf(f, "int main() {\n");
 	fprintf(f, "	serio_setup();\n");
 	fprintf(f, "	serio_break();\n");
-	fprintf(f, "	fifo_data[fifo_in++] = 'H';\n");
-	fprintf(f, "	fifo_data[fifo_in++] = 'e';\n");
-	fprintf(f, "	fifo_data[fifo_in++] = 'l';\n");
-	fprintf(f, "	fifo_data[fifo_in++] = 'l';\n");
-	fprintf(f, "	fifo_data[fifo_in++] = 'o';\n");
-	fprintf(f, "	fifo_data[fifo_in++] = '\\r';\n");
-	fprintf(f, "	fifo_data[fifo_in++] = '\\n';\n");
-	fprintf(f, "	while (1) {\n");
+	for (int i = 0; i < hp; i++)
+		fprintf(f, "	fifo_data[fifo_in++] = 0x%02x;\n", header[i]);
+	fprintf(f, "	while ((UCSR0A & _BV(RXC0)) == 0) {\n");
 	fprintf(f, "		serio_send();\n");
+	// FIXME -- Add actual capture logic here
 	fprintf(f, "	}\n");
+	fprintf(f, "	fifo_close();\n");
+	fprintf(f, "	serio_break();\n");
 	fprintf(f, "	while (1) { }\n");
 	fprintf(f, "}\n");
 

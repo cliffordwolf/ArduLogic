@@ -37,7 +37,7 @@ std::list<uint16_t> samples;
 
 void help(const char *progname)
 {
-	fprintf(stderr, "Usage: %s [-p] [-t <dev>] <configfile> <vcdfile>\n", progname);
+	fprintf(stderr, "Usage: %s [-p [-n]] [-t <dev>] <configfile> <vcdfile>\n", progname);
 	exit(1);
 }
 
@@ -46,11 +46,15 @@ int main(int argc, char **argv)
 	int opt;
 	const char *ttydev = "/dev/ttyACM0";
 	int programm_arduino = 0;
+	int dont_cleanup = 0;
 
-	while ((opt = getopt(argc, argv, "pt:")) != -1) {
+	while ((opt = getopt(argc, argv, "pnt:")) != -1) {
 		switch (opt) {
 		case 'p':
 			programm_arduino = 1;
+			break;
+		case 'n':
+			dont_cleanup = 1;
 			break;
 		case 't':
 			ttydev = optarg;
@@ -71,9 +75,11 @@ int main(int argc, char **argv)
 		int rc = system("set -x; avr-gcc -Wall -O3 -o .ardulogic_tmp.firmware.elf -mmcu=atmega328p -DF_CPU=16000000L .ardulogic_tmp.firmware.c");
 		rc = rc ?: system("set -x; avr-objcopy -j .text -j .data -O ihex .ardulogic_tmp.firmware.elf .ardulogic_tmp.firmware.hex");
 		rc = rc ?: system("set -x; avrdude -p m328p -b 115200 -c arduino -P \"$ARDUINO_TTY\" -v -U \"flash:w:.ardulogic_tmp.firmware.hex\"");
-		remove(".ardulogic_tmp.firmware.c");
-		remove(".ardulogic_tmp.firmware.elf");
-		remove(".ardulogic_tmp.firmware.hex");
+		if (!dont_cleanup) {
+			remove(".ardulogic_tmp.firmware.c");
+			remove(".ardulogic_tmp.firmware.elf");
+			remove(".ardulogic_tmp.firmware.hex");
+		}
 		if (rc) {
 			fprintf(stderr, "Error while compiling firmware or programming the arduino!\n");
 			exit(1);

@@ -59,7 +59,7 @@ static void gen_pack(FILE *f)
 	fprintf(f, "}\n");
 }
 
-void gen_fifo(FILE *f, int num_bits)
+static void gen_fifo(FILE *f, int num_bits)
 {
 	fprintf(f, "static void serio_send();\n");
 	fprintf(f, "uint8_t fifo_data[256];\n");
@@ -92,7 +92,7 @@ void gen_fifo(FILE *f, int num_bits)
 	fprintf(f, "}\n");
 }
 
-void gen_serio(FILE *f)
+static void gen_serio(FILE *f)
 {
 	fprintf(f, "#define BAUD_RATE 115200\n");
 	fprintf(f, "static void serio_setup() {\n");
@@ -114,18 +114,67 @@ void gen_serio(FILE *f)
 	fprintf(f, "}\n");
 }
 
+static void gen_trigger(FILE *f)
+{
+	fprintf(f, "static uint8_t trigger_state = 0x80;\n");
+	fprintf(f, "static void check_trigger() {\n");
+	fprintf(f, "	uint8_t value_pinc = PINC;\n");
+	fprintf(f, "	uint8_t value_pind = PIND;\n");
+	fprintf(f, "	PORTB |= 0x01;\n");
+	fprintf(f, "	uint8_t new_state = 0;\n");
+
+	int idx = 0;
+	uint8_t posedge_mask = 0x80;
+	uint8_t negedge_mask = 0x80;
+	for (int i = 0; i < TOTAL_PIN_NUM; i++) {
+		if ((pins[i] & (PIN_TRIGGER_POSEDGE | PIN_TRIGGER_NEGEDGE)) == 0)
+			continue;
+		if ((pins[i] & PIN_TRIGGER_POSEDGE) != 0)
+			posedge_mask |= 1 << idx;
+		if ((pins[i] & PIN_TRIGGER_NEGEDGE) != 0)
+			negedge_mask |= 1 << idx;
+		if (PIN_A(0) <= i && i <= PIN_A(5))
+			fprintf(f, "	new_state |= (value_pinc & 0x%02x) != 0 ? 0x%02x : 0;\n", 1 << (i-PIN_A(0)), 1 << idx);
+		if (PIN_D(2) <= i && i <= PIN_D(7))
+			fprintf(f, "	new_state |= (value_pind & 0x%02x) != 0 ? 0x%02x : 0;\n", 1 << (i-PIN_D(0)), 1 << idx);
+		idx++;
+	}
+
+	fprintf(f, "	if ((new_state & ~trigger_state & 0x%02x) != 0)\n", posedge_mask);
+	fprintf(f, "		goto triggered;\n");
+	fprintf(f, "	if ((~new_state & trigger_state & 0x%02x) != 0)\n", negedge_mask);
+	fprintf(f, "		goto triggered;\n");
+	fprintf(f, "	PORTB &= ~0x01;\n");
+	fprintf(f, "	return;\n");
+
+	fprintf(f, "triggered:\n");
+	fprintf(f, "	PORTB |= 0x02;\n");
+	fprintf(f, "	trigger_state = new_state;\n");
+	fprintf(f, "	fifo_push(pack(value_pinc, value_pind));\n");
+	fprintf(f, "	PORTB &= ~0x03;\n");
+	fprintf(f, "}\n");
+}
+
 void genfirmware(const char *file)
 {
 	int use_irq_trigger = 1;
+	int num_trigger = 0;
 	int num_bits = 0;
 
 	for (int i = 0; i < TOTAL_PIN_NUM; i++) {
+		if ((pins[i] & (PIN_TRIGGER_POSEDGE | PIN_TRIGGER_NEGEDGE)) != 0)
+			num_trigger++;
 		if ((pins[i] & PIN_CAPTURE) != 0)
 			num_bits++;
 		if (i == PIN_D(2) || i == PIN_D(3))
 			continue;
 		if ((pins[i] & (PIN_TRIGGER_POSEDGE|PIN_TRIGGER_NEGEDGE)) != 0)
 			use_irq_trigger = 0;
+	}
+
+	if (num_trigger > 7) {
+		fprintf(stderr, "A maximum of 7 trigger pins is supported by the firmware generator.\n");
+		exit(1);
 	}
 
 	if (!use_irq_trigger)
@@ -146,6 +195,7 @@ void genfirmware(const char *file)
 	gen_pack(f);
 	gen_fifo(f, num_bits);
 	gen_serio(f);
+	gen_trigger(f);
 
 	char header[32 + TOTAL_PIN_NUM] = "..ARDULOGIC:";
 	int hp = strlen(header);
@@ -157,12 +207,18 @@ void genfirmware(const char *file)
 	header[hp++] = '\n';
 
 	fprintf(f, "int main() {\n");
+	fprintf(f, "	DDRB = 0x03;\n");
+	fprintf(f, "	DDRC = 0;\n");
+	fprintf(f, "	DDRD = 0;\n");
+	fprintf(f, "	PORTB = 0;\n");
+	fprintf(f, "	PORTC = 0;\n");
+	fprintf(f, "	PORTD = 0;\n");
 	fprintf(f, "	serio_setup();\n");
 	for (int i = 0; i < hp; i++)
 		fprintf(f, "	fifo_data[fifo_in++] = 0x%02x;\n", header[i]);
 	fprintf(f, "	while ((UCSR0A & _BV(RXC0)) == 0) {\n");
 	fprintf(f, "		serio_send();\n");
-	// FIXME -- Add actual capture logic here
+	fprintf(f, "		check_trigger();\n");
 	fprintf(f, "	}\n");
 	fprintf(f, "	fifo_close();\n");
 	fprintf(f, "	fifo_data[fifo_in++] = 0;\n");

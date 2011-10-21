@@ -14,12 +14,12 @@ as probe. The following pins on the Arduino can be used for probing:
 	    5       |  PIND5  | D5
 	    6       |  PIND6  | D6
 	    7       |  PIND7  | D7
-	   A0       |  PINB0  | A0
-	   A1       |  PINB1  | A1
-	   A2       |  PINB2  | A2
-	   A3       |  PINB3  | A3
-	   A4       |  PINB4  | A4
-	   A5       |  PINB5  | A5
+	   A0       |  PINC0  | A0
+	   A1       |  PINC1  | A1
+	   A2       |  PINC2  | A2
+	   A3       |  PINC3  | A3
+	   A4       |  PINC4  | A4
+	   A5       |  PINC5  | A5
 
 ArduLogic can use any pin as trigger pin (clock signals, etc), but IRQs are
 only used when all triggers are on the pins D2 and/or D3. So it is highly

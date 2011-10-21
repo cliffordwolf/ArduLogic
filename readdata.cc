@@ -120,10 +120,12 @@ void readdata(const char *tts)
 			tcsetattr(fd, TCSAFLUSH, &tcattr_old);
 			exit(1);
 		}
+		printf(".");
+		fflush(stdout);
 		data.push_back(ch);
 	}
 
-	printf("\rRecording finished. Got %d bytes tts payload.\n", idx);
+	printf("\nRecording finished. Got %d bytes tts payload.\n", idx);
 	signal(SIGINT, old_hdl);
 
 	// FIXME: Decode data

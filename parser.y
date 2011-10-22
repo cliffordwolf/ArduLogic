@@ -55,7 +55,7 @@ void yyerror (char const *s) {
 
 %token TOK_TRIGGER TOK_POSEDGE TOK_NEGEDGE
 %token TOK_DECODE TOK_SPI TOK_I2C TOK_JTAG
-%token TOK_CAPTURE TOK_EOL
+%token TOK_CAPTURE TOK_PULLUP TOK_EOL
 
 %type <num> edge neg
 
@@ -67,7 +67,7 @@ config:
 	config stmt TOK_EOL;
 
 stmt:
-	stmt_trigger | stmt_monitor | stmt_decode;
+	stmt_trigger | stmt_capture | stmt_pullup | stmt_decode;
 
 stmt_trigger:
 	TOK_TRIGGER edge TOK_PIN {
@@ -76,7 +76,7 @@ stmt_trigger:
 		decode = DECODE_TRIGGER;
 	};
 
-stmt_monitor:
+stmt_capture:
 	TOK_CAPTURE capture_list;
 
 capture_list:
@@ -85,6 +85,17 @@ capture_list:
 	} |
 	TOK_PIN {
 		pins[$1] |= PIN_CAPTURE;
+	};
+
+stmt_pullup:
+	TOK_PULLUP pullup_list;
+
+pullup_list:
+	pullup_list TOK_PIN {
+		pins[$2] |= PIN_PULLUP;
+	} |
+	TOK_PIN {
+		pins[$1] |= PIN_PULLUP;
 	};
 
 stmt_decode:

@@ -44,6 +44,7 @@ D[2-7] {
 "posedge"	{ return TOK_POSEDGE; }
 "negedge"	{ return TOK_NEGEDGE; }
 "capture"	{ return TOK_CAPTURE; }
+"pullup"	{ return TOK_PULLUP; }
 
 "decode"	{ return TOK_DECODE; }
 "spi"		{ return TOK_SPI; }

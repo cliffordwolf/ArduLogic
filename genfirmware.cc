@@ -151,7 +151,7 @@ static void gen_trigger(FILE *f)
 	fprintf(f, "	if ((~new_state & trigger_state & 0x%02x) != 0)\n", negedge_mask);
 	fprintf(f, "		goto triggered;\n");
 	fprintf(f, "	trigger_state = new_state;\n");
-	fprintf(f, "	PORTB &= ~0x01;\n");
+	fprintf(f, "	PORTB &= ~0x03;\n");
 	fprintf(f, "	return;\n");
 
 	fprintf(f, "triggered:\n");
@@ -213,13 +213,23 @@ void genfirmware(const char *file)
 	header[hp++] = '\r';
 	header[hp++] = '\n';
 
+	uint8_t pullupc = 0, pullupd = 0;
+	for (int i = 0; i < TOTAL_PIN_NUM; i++) {
+		if ((pins[i] & PIN_PULLUP) == 0)
+			continue;
+		if (PIN_A(0) <= i && i <= PIN_A(5))
+			pullupc |= 1 << (i-PIN_A(0));
+		if (PIN_D(2) <= i && i <= PIN_D(7))
+			pullupd |= 1 << (i-PIN_D(0));
+	}
+
 	fprintf(f, "int main() {\n");
 	fprintf(f, "	DDRB = 0x03;\n");
 	fprintf(f, "	DDRC = 0;\n");
 	fprintf(f, "	DDRD = 0;\n");
 	fprintf(f, "	PORTB = 0;\n");
-	fprintf(f, "	PORTC = 0;\n");
-	fprintf(f, "	PORTD = 0;\n");
+	fprintf(f, "	PORTC = 0x%02x;\n", pullupc);
+	fprintf(f, "	PORTD = 0x%02x;\n", pullupd);
 	fprintf(f, "	serio_setup();\n");
 	for (int i = 0; i < hp; i++)
 		fprintf(f, "	fifo_data[fifo_in++] = 0x%02x;\n", header[i]);

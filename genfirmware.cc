@@ -144,6 +144,7 @@ static void gen_trigger(FILE *f)
 	fprintf(f, "		goto triggered;\n");
 	fprintf(f, "	if ((~new_state & trigger_state & 0x%02x) != 0)\n", negedge_mask);
 	fprintf(f, "		goto triggered;\n");
+	fprintf(f, "	trigger_state = new_state;\n");
 	fprintf(f, "	PORTB &= ~0x01;\n");
 	fprintf(f, "	return;\n");
 

@@ -65,4 +65,6 @@ void genfirmware(const char *file);
 void readdata(const char *tts);
 void writevcd(const char *file);
 
+extern bool verbose;
+
 #endif

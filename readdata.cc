@@ -32,6 +32,8 @@
 #include <fcntl.h>
 #include <signal.h>
 
+#include <vector>
+
 static int fd;
 static struct termios tcattr_old;
 static const char *tts_name;
@@ -50,14 +52,51 @@ static unsigned char serialread()
 {
 	unsigned char ch;
 	int rc = read(fd, &ch, 1);
-	if (rc == 1)
+	if (rc == 1) {
+		if (verbose) {
+			if (32 < ch && ch < 127)
+				printf("<%x:%c>\n", ch, ch);
+			else
+				printf("<%x>\n", ch);
+		}
 		return ch;
+	}
 	if (rc == 0)
 		fprintf(stderr, "I/O Error on tts `%s': EOF\n", tts_name);
 	else
 		fprintf(stderr, "I/O Error on tts `%s': %s\n", tts_name, strerror(errno));
 	tcsetattr(fd, TCSAFLUSH, &tcattr_old);
 	exit(1);
+}
+
+static size_t get_numbits(std::vector<uint8_t> &data)
+{
+	return (data.size()-1) * 7 - (data.back() & ~0x80);
+}
+
+static bool get_bit(std::vector<uint8_t> &data, size_t num)
+{
+	size_t byte_num = num / 7;
+	size_t bit_num = num % 7;
+	return (data[byte_num] & (1 << bit_num)) != 0;
+}
+
+static size_t get_numwords(std::vector<uint8_t> &data, size_t bits)
+{
+	size_t total_bits = get_numbits(data);
+	if (total_bits % bits != 0) {
+		fprintf(stderr, "Data encoding boundary error on tts `%s'.\n", tts_name);
+		exit(1);
+	}
+	return total_bits / bits;
+}
+
+static uint16_t get_word(std::vector<uint8_t> &data, size_t num, size_t bits)
+{
+	uint16_t value = 0;
+	for (size_t i = 0; i < bits; i++)
+		value = get_bit(data, num*bits + i) ? 1 << i : 0;
+	return value;
 }
 
 void readdata(const char *tts)
@@ -106,31 +145,55 @@ void readdata(const char *tts)
 	printf("Recording. Press Ctrl-C to stop.\n");
 	sighandler_t old_hdl = signal(SIGINT, &sigint_hdl);
 
-	std::list<uint8_t> data;
-	for (idx = 0;; idx++)
+	std::vector<uint8_t> data;
+	while (1)
 	{
 		unsigned char ch = serialread();
-		if (ch == 0) {
+		if (ch == 0x80) {
 			ch = serialread();
-			if (ch == 1)
+			if (ch == 0x81)
 				break;
+			goto encoder_error;
 		}
-		if ((ch & 0x80) == 0) {
+		if ((ch & 0x80) != 0) {
+	encoder_error:
 			fprintf(stderr, "Data encoding error on tts `%s'.\n", tts_name);
 			tcsetattr(fd, TCSAFLUSH, &tcattr_old);
 			exit(1);
 		}
-		printf(".");
-		fflush(stdout);
+		if (!verbose) {
+			printf(".");
+			fflush(stdout);
+		}
 		data.push_back(ch);
 	}
 
-	printf("\nRecording finished. Got %d bytes tts payload.\n", idx);
+	printf("\nRecording finished. Got %d bytes tts payload.\n", (int)data.size());
 	signal(SIGINT, old_hdl);
-
-	// FIXME: Decode data
 
 	tcsetattr(fd, TCSAFLUSH, &tcattr_old);
 	close(fd);
+
+	int num_bits = 0;
+	int bit2pin[16] = { /* zeros */ };
+	for (int i = 0; i < TOTAL_PIN_NUM; i++) {
+		if ((pins[i] & PIN_CAPTURE) == 0)
+			continue;
+		bit2pin[num_bits++] = i;
+	}
+
+	int num_words = get_numwords(data, num_bits);
+	for (int i = 0; i < num_words; i++) {
+		uint16_t word = get_word(data, i, num_bits);
+		uint16_t sample = 0;
+		for (int j = 0; j < num_bits; j++) {
+			if ((word & (1 << j)) == 0)
+				continue;
+			sample |= 1 << bit2pin[j];
+		}
+		samples.push_back(sample);
+	}
+
+	printf("Decoded %d samples from captured data.\n", (int)samples.size());
 }
 

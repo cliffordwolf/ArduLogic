@@ -3,11 +3,11 @@
 ### Just record everything on each edge of D2
 ### enable pullup resistors on all D2-D7
 ###
-trigger posedge D2
-trigger negedge D2
-capture A0 A1 A2 A3 A4 A5
-capture D2 D3 D4 D5 D6 D7
-pullup D2 D3 D4 D5 D6 D7
+# trigger posedge D2
+# trigger negedge D2
+# capture A0 A1 A2 A3 A4 A5
+# capture D2 D3 D4 D5 D6 D7
+# pullup D2 D3 D4 D5 D6 D7
 
 ###
 ### Decode SPI Data
@@ -35,5 +35,5 @@ pullup D2 D3 D4 D5 D6 D7
 ### TDI = D4
 ### TDO = D5
 ###
-# decode jtag D2 D3 D4 D5
+decode jtag D2 D3 D4 D5
 

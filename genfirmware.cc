@@ -69,7 +69,7 @@ static void gen_fifo(FILE *f, int num_bits)
 	fprintf(f, "static inline void fifo_next() {\n");
 	fprintf(f, "	while (fifo_in+1 == fifo_out)\n");
 	fprintf(f, "		serio_send();\n");
-	fprintf(f, "	fifo_data[++fifo_in] = 0x80;\n");
+	fprintf(f, "	fifo_data[++fifo_in] = 0;\n");
 	fprintf(f, "	fifo_bits = 7;\n");
 	fprintf(f, "}\n");
 	fprintf(f, "static inline void fifo_push(smplword_t w) {\n");
@@ -87,7 +87,7 @@ static void gen_fifo(FILE *f, int num_bits)
 	fprintf(f, "static inline void fifo_close() {\n");
 	fprintf(f, "	while (fifo_in+1 == fifo_out)\n");
 	fprintf(f, "		serio_send();\n");
-	fprintf(f, "	fifo_data[++fifo_in] = 0x80 | fifo_bits;\n");
+	fprintf(f, "	fifo_data[++fifo_in] = fifo_bits;\n");
 	fprintf(f, "	fifo_next();\n");
 	fprintf(f, "}\n");
 }
@@ -238,10 +238,13 @@ void genfirmware(const char *file)
 	fprintf(f, "		check_trigger();\n");
 	fprintf(f, "	}\n");
 	fprintf(f, "	fifo_close();\n");
-	fprintf(f, "	fifo_data[fifo_in++] = 0;\n");
-	fprintf(f, "	fifo_data[fifo_in++] = 1;\n");
-	fprintf(f, "	while (1)\n");
+	fprintf(f, "	while (fifo_in != fifo_out)\n");
 	fprintf(f, "		serio_send();\n");
+	fprintf(f, "	fifo_data[fifo_in++] = 0x80;\n");
+	fprintf(f, "	fifo_data[fifo_in++] = 0x81;\n");
+	fprintf(f, "	while (fifo_in != fifo_out)\n");
+	fprintf(f, "		serio_send();\n");
+	fprintf(f, "	return 0;\n");
 	fprintf(f, "}\n");
 
 	fclose(f);

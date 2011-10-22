@@ -76,7 +76,7 @@ void readdata(const char *tts)
 
 	tcgetattr(fd, &tcattr_old);
 	struct termios tcattr = tcattr_old;
-	tcattr.c_iflag = INPCK | PARMRK;
+	tcattr.c_iflag = IGNBRK | IGNPAR;
 	tcattr.c_oflag = 0;
 	tcattr.c_cflag = CS8 | CREAD | CLOCAL;
 	tcattr.c_lflag = 0;

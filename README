@@ -70,6 +70,11 @@ it is possible to trigger on a pin without capturing it. It's possible
 to mix `capture' statements with `decode' statements, e.g. to add
 information from additional sideband signals to the vcd file.
 
+pullup <PIN> [...]
+------------------
+
+Enable the internal AVR pullup resistors on the specified pin(s).
+
 decode spi <EDGE> <PIN-SCK> [!] <PIN-CS> <PIN-MOSI> <PIN-MISO>
 --------------------------------------------------------------
 

@@ -112,6 +112,12 @@ static void gen_serio(FILE *f)
 	fprintf(f, "		return;\n");
 	fprintf(f, "	UDR0 = fifo_data[fifo_out++];\n");
 	fprintf(f, "}\n");
+#if 0
+	fprintf(f, "static void serio_sendbyte(uint8_t ch) {\n");
+	fprintf(f, "	while ((UCSR0A & _BV(UDRE0)) == 0) { /* wait */ }\n");
+	fprintf(f, "	UDR0 = ch;\n");
+	fprintf(f, "}\n");
+#endif
 }
 
 static void gen_trigger(FILE *f)

@@ -234,8 +234,6 @@ void genfirmware(const char *file)
 	for (int i = 0; i < hp; i++)
 		fprintf(f, "	fifo_data[fifo_in++] = 0x%02x;\n", header[i]);
 	fprintf(f, "	fifo_data[fifo_in] |= 0x80;\n");
-	fprintf(f, "	for (smplword_t i = 0; i < 0x%x; i++)\n", (1 << num_bits) - 1);
-	fprintf(f, "		fifo_push(i);\n");
 	fprintf(f, "	while ((UCSR0A & _BV(RXC0)) == 0) {\n");
 	fprintf(f, "		serio_send();\n");
 	fprintf(f, "		check_trigger();\n");

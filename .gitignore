@@ -3,5 +3,6 @@ lexer.cc
 parser.cc
 parser.hh
 .ardulogic_tmp.*
+example.vcd
 *.d
 *.o

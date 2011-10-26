@@ -32,8 +32,6 @@
 #include <fcntl.h>
 #include <signal.h>
 
-#include <vector>
-
 static int fd;
 static struct termios tcattr_old;
 static const char *tts_name;

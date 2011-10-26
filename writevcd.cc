@@ -21,8 +21,54 @@
 
 #include "ardulogic.h"
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <errno.h>
+
 void writevcd(const char *file)
 {
-	/* FIXME */
+	FILE *f = fopen(file, "w");
+
+	if (f == NULL) {
+		fprintf(stderr, "Can't open VCD file `%s': %s\n", file, strerror(errno));
+		exit(1);
+	}
+
+	fprintf(f, "$comment Created by ArduLogic\n");
+	for (int i = 0; i < TOTAL_PIN_NUM; i++)
+		if ((pins[i] & PIN_CAPTURE) != 0)
+			fprintf(f, "$var reg 1 p%d %s $end\n", i, pin_names[i]);
+	fprintf(f, "$enddefinitions\n");
+
+	if (samples.size() == 0) {
+		fprintf(f, "#0 $dumpall");
+		for (int i = 0; i < TOTAL_PIN_NUM; i++)
+			if ((pins[i] & PIN_CAPTURE) != 0)
+				fprintf(f, " xp%d", i);
+		fprintf(f, " $end\n");
+		fclose(f);
+		return;
+	}
+
+	fprintf(f, "#0 $dumpall");
+	for (int i = 0; i < TOTAL_PIN_NUM; i++)
+		if ((pins[i] & PIN_CAPTURE) != 0)
+			fprintf(f, " %dp%d", (samples[0] & (1 << i)) != 0, i);
+	fprintf(f, " $end\n");
+
+	for (size_t i = 1; i < samples.size(); i++) {
+		fprintf(f, "#%d", i);
+		for (int i = 0; i < TOTAL_PIN_NUM; i++) {
+			if ((pins[i] & PIN_CAPTURE) == 0)
+				continue;
+			if (((samples[i-1] ^ samples[i]) & (1 << i)) == 0)
+				continue;
+			fprintf(f, " %dp%d", (samples[i] & (1 << i)) != 0, i);
+		}
+		fprintf(f, "\n");
+	}
+
+	fclose(f);
 }
 

@@ -23,7 +23,7 @@
 #define ARDULOGIC_H
 
 #include <stdint.h>
-#include <list>
+#include <vector>
 
 #define PIN_A(__n) (__n)
 #define PIN_D(__n) (__n+4)
@@ -58,7 +58,7 @@ extern int decode;
 extern int decode_config[CFG_WORDS];
 extern int pins[TOTAL_PIN_NUM];
 extern const char *pin_names[TOTAL_PIN_NUM];
-extern std::list<uint16_t> samples;
+extern std::vector<uint16_t> samples;
 
 void config(const char *file);
 void genfirmware(const char *file);

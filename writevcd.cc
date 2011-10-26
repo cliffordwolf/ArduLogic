@@ -58,7 +58,7 @@ void writevcd(const char *file)
 	fprintf(f, " $end\n");
 
 	for (size_t i = 1; i < samples.size(); i++) {
-		fprintf(f, "#%d", i);
+		fprintf(f, "#%zd", i);
 		for (int i = 0; i < TOTAL_PIN_NUM; i++) {
 			if ((pins[i] & PIN_CAPTURE) == 0)
 				continue;

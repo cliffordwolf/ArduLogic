@@ -35,7 +35,7 @@ void writevcd(const char *file)
 		exit(1);
 	}
 
-	fprintf(f, "$comment Created by ArduLogic\n");
+	fprintf(f, "$comment Created by ArduLogic $end\n");
 	for (int i = 0; i < TOTAL_PIN_NUM; i++)
 		if ((pins[i] & PIN_CAPTURE) != 0)
 			fprintf(f, "$var reg 1 p%d %s $end\n", i, pin_names[i]);
@@ -68,6 +68,7 @@ void writevcd(const char *file)
 		}
 		fprintf(f, "\n");
 	}
+	fprintf(f, "#%zd\n", samples.size());
 
 	fclose(f);
 }

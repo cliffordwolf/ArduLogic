@@ -1,0 +1,15 @@
+// Example JTAG SVF file using Xilinx XC9536XL VQ44
+// play with: xsvftool-ft2232h -d - -vvvs example.svd
+TRST OFF;
+ENDIR IDLE;
+ENDDR IDLE;
+STATE RESET;
+STATE IDLE;
+FREQUENCY 1E5 HZ;
+TIR 0;
+HIR 0;
+TDR 0;
+HDR 0;
+// Check idcode
+SIR 8 TDI (fe) SMASK (ff);
+SDR 32 TDI (00000000) SMASK (ffffffff) TDO (f9602093) MASK (0fffffff);

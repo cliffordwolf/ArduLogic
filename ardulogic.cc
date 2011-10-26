@@ -77,7 +77,7 @@ int main(int argc, char **argv)
 	if (programm_arduino) {
 		genfirmware(".ardulogic_tmp.firmware.c");
 		setenv("ARDUINO_TTY", ttydev, 1);
-		int rc = system("set -x; avr-gcc -Wall -O3 -o .ardulogic_tmp.firmware.elf -mmcu=atmega328p -DF_CPU=16000000L .ardulogic_tmp.firmware.c");
+		int rc = system("set -x; avr-gcc -Wall -std=gnu99 -O3 -o .ardulogic_tmp.firmware.elf -mmcu=atmega328p -DF_CPU=16000000L .ardulogic_tmp.firmware.c");
 		rc = rc ?: system("set -x; avr-objcopy -j .text -j .data -O ihex .ardulogic_tmp.firmware.elf .ardulogic_tmp.firmware.hex");
 		rc = rc ?: system("set -x; avrdude -p m328p -b 115200 -c arduino -P \"$ARDUINO_TTY\" -v -U \"flash:w:.ardulogic_tmp.firmware.hex\"");
 		if (!dont_cleanup) {

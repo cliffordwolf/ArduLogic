@@ -63,13 +63,13 @@ static void gen_fifo(FILE *f, int num_bits)
 {
 	fprintf(f, "static void serio_send();\n");
 	fprintf(f, "uint8_t fifo_data[256];\n");
-	fprintf(f, "uint8_t fifo_in = 0, fifo_out = 0, fifo_bits = 0;\n");
+	fprintf(f, "uint8_t fifo_in = 0, fifo_out = 0, fifo_bits = 7;\n");
 	fprintf(f, "static inline bool fifo_empty() { return fifo_in == fifo_out; }\n");
 	fprintf(f, "static inline uint8_t fifo_shift() { return fifo_data[fifo_out++]; }\n");
 	fprintf(f, "static inline void fifo_next() {\n");
 	fprintf(f, "	while (fifo_in+1 == fifo_out)\n");
 	fprintf(f, "		serio_send();\n");
-	fprintf(f, "	fifo_data[++fifo_in] = 0;\n");
+	fprintf(f, "	fifo_data[++fifo_in] = 0x80;\n");
 	fprintf(f, "	fifo_bits = 7;\n");
 	fprintf(f, "}\n");
 	fprintf(f, "static inline void fifo_push(smplword_t w) {\n");
@@ -85,9 +85,9 @@ static void gen_fifo(FILE *f, int num_bits)
 	fprintf(f, "	} while (bits > 0);\n");
 	fprintf(f, "}\n");
 	fprintf(f, "static inline void fifo_close() {\n");
-	fprintf(f, "	while (fifo_in+1 == fifo_out)\n");
+	fprintf(f, "	while (fifo_in != fifo_out)\n");
 	fprintf(f, "		serio_send();\n");
-	fprintf(f, "	fifo_data[++fifo_in] = fifo_bits;\n");
+	fprintf(f, "	fifo_data[++fifo_in] = 0x80 | fifo_bits;\n");
 	fprintf(f, "	fifo_next();\n");
 	fprintf(f, "}\n");
 }
@@ -233,6 +233,9 @@ void genfirmware(const char *file)
 	fprintf(f, "	serio_setup();\n");
 	for (int i = 0; i < hp; i++)
 		fprintf(f, "	fifo_data[fifo_in++] = 0x%02x;\n", header[i]);
+	fprintf(f, "	fifo_data[fifo_in] |= 0x80;\n");
+	fprintf(f, "	for (smplword_t i = 0; i < 0x%x; i++)\n", (1 << num_bits) - 1);
+	fprintf(f, "		fifo_push(i);\n");
 	fprintf(f, "	while ((UCSR0A & _BV(RXC0)) == 0) {\n");
 	fprintf(f, "		serio_send();\n");
 	fprintf(f, "		check_trigger();\n");
@@ -240,8 +243,8 @@ void genfirmware(const char *file)
 	fprintf(f, "	fifo_close();\n");
 	fprintf(f, "	while (fifo_in != fifo_out)\n");
 	fprintf(f, "		serio_send();\n");
-	fprintf(f, "	fifo_data[fifo_in++] = 0x80;\n");
-	fprintf(f, "	fifo_data[fifo_in++] = 0x81;\n");
+	fprintf(f, "	fifo_data[fifo_in++] = 0;\n");
+	fprintf(f, "	fifo_data[fifo_in++] = 1;\n");
 	fprintf(f, "	while (fifo_in != fifo_out)\n");
 	fprintf(f, "		serio_send();\n");
 	fprintf(f, "	return 0;\n");

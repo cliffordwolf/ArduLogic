@@ -48,6 +48,11 @@ static void sigint_hdl(int dummy)
 	}
 }
 
+static void sigalrm_hdl(int dummy)
+{
+	printf("Please push the reset button on the Arduino.\n");
+}
+
 static unsigned char serialread()
 {
 	unsigned char ch;
@@ -55,9 +60,15 @@ static unsigned char serialread()
 	if (rc == 1) {
 		if (verbose) {
 			if (32 < ch && ch < 127)
-				printf("<%x:%c>\n", ch, ch);
+				printf("<%2x:%c>\n", ch, ch);
+			else if (ch > 127)
+				printf("<%2x:%d%d%d%d%d%d%d%d>\n", ch,
+						(ch & 0x80) != 0, (ch & 0x40) != 0,
+						(ch & 0x20) != 0, (ch & 0x01) != 0,
+						(ch & 0x08) != 0, (ch & 0x04) != 0,
+						(ch & 0x02) != 0, (ch & 0x01) != 0);
 			else
-				printf("<%x>\n", ch);
+				printf("<%2x>\n", ch);
 		}
 		return ch;
 	}
@@ -95,7 +106,7 @@ static uint16_t get_word(std::vector<uint8_t> &data, size_t num, size_t bits)
 {
 	uint16_t value = 0;
 	for (size_t i = 0; i < bits; i++)
-		value = get_bit(data, num*bits + i) ? 1 << i : 0;
+		value |= get_bit(data, num*bits + i) ? 1 << i : 0;
 	return value;
 }
 
@@ -110,9 +121,6 @@ void readdata(const char *tts)
 		exit(1);
 	}
 
-	// give the arduino some time to go thru it's reset hysteria
-	sleep(2);
-
 	tcgetattr(fd, &tcattr_old);
 	struct termios tcattr = tcattr_old;
 	tcattr.c_iflag = IGNBRK | IGNPAR;
@@ -122,10 +130,8 @@ void readdata(const char *tts)
 	cfsetspeed(&tcattr, B115200);
 	tcsetattr(fd, TCSAFLUSH, &tcattr);
 
-	printf("Please push the reset button on the Arduino.\n");
-
 	char header[32 + TOTAL_PIN_NUM] = "..ARDULOGIC:";
-	int hp = strlen(header);
+	int hp = strlen(header), hdrlen = hp;
 	header[0] = header[1] = 0;
 	for (int i = 0; i < TOTAL_PIN_NUM; i++)
 		header[hp++] = pins[i] + '0';
@@ -133,29 +139,39 @@ void readdata(const char *tts)
 	header[hp++] = '\r';
 	header[hp++] = '\n';
 
+	sighandler_t old_hdl = signal(SIGALRM, &sigalrm_hdl);
+	alarm(3);
+
 	int idx = 0;
 	while (idx != hp) {
 		unsigned char ch = serialread();
-		if (header[idx] != ch)
+		if (header[idx] != ch) {
+			if (idx > hdrlen && ch != 0) {
+				fprintf(stderr, "Firmware doesn't match configuration. Re-run with -p.\n");
+				exit(1);
+			}
 			idx = header[0] == ch ? 1 : 0;
-		else
+		} else
 			idx++;
 	}
 
+	alarm(0);
+	signal(SIGALRM, old_hdl);
+
 	printf("Recording. Press Ctrl-C to stop.\n");
-	sighandler_t old_hdl = signal(SIGINT, &sigint_hdl);
+	old_hdl = signal(SIGINT, &sigint_hdl);
 
 	std::vector<uint8_t> data;
 	while (1)
 	{
 		unsigned char ch = serialread();
-		if (ch == 0x80) {
+		if (ch == 0) {
 			ch = serialread();
-			if (ch == 0x81)
+			if (ch == 1)
 				break;
 			goto encoder_error;
 		}
-		if ((ch & 0x80) != 0) {
+		if ((ch & 0x80) == 0) {
 	encoder_error:
 			fprintf(stderr, "Data encoding error on tts `%s'.\n", tts_name);
 			tcsetattr(fd, TCSAFLUSH, &tcattr_old);
@@ -191,6 +207,8 @@ void readdata(const char *tts)
 				continue;
 			sample |= 1 << bit2pin[j];
 		}
+		if (verbose)
+			printf("Decode: word=0x%04x -> sample=0x%04x\n", word, sample);
 		samples.push_back(sample);
 	}
 

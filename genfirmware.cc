@@ -62,8 +62,8 @@ static void gen_pack(FILE *f)
 static void gen_fifo(FILE *f, int num_bits)
 {
 	fprintf(f, "static void serio_send();\n");
-	fprintf(f, "uint8_t fifo_data[256];\n");
-	fprintf(f, "uint8_t fifo_in = 0, fifo_out = 0, fifo_bits = 7;\n");
+	fprintf(f, "uint8_t fifo_data[256], fifo_bits = 7;\n");
+	fprintf(f, "volatile uint8_t fifo_in = 0, fifo_out = 0;\n");
 	fprintf(f, "static inline bool fifo_empty() { return fifo_in == fifo_out; }\n");
 	fprintf(f, "static inline uint8_t fifo_shift() { return fifo_data[fifo_out++]; }\n");
 	fprintf(f, "static inline void fifo_next() {\n");
@@ -120,7 +120,7 @@ static void gen_serio(FILE *f)
 #endif
 }
 
-static void gen_trigger(FILE *f, bool use_irq_trigger)
+static void gen_trigger(FILE *f)
 {
 	fprintf(f, "static uint8_t trigger_state = 0x80;\n");
 
@@ -161,10 +161,18 @@ static void gen_trigger(FILE *f, bool use_irq_trigger)
 	fprintf(f, "	fifo_push(pack(value_pinc, value_pind));\n");
 	fprintf(f, "	PORTB &= ~0x03;\n");
 	fprintf(f, "}\n");
+}
 
-	if (use_irq_trigger) {
-		fprintf(f, "ISR(INT0_vect) { check_trigger(); }\n");
-		fprintf(f, "ISR(INT1_vect) { check_trigger(); }\n");
+static void gen_irq_trigger(FILE *f)
+{
+	fprintf(f, "volatile uint8_t value_pinc;\n");
+	fprintf(f, "volatile uint8_t value_pind;\n");
+	for (int i=0; i<2; i++) {
+		fprintf(f, "ISR(INT%d_vect) {\n", i);
+		fprintf(f, "	PORTB |= 0x02;\n");
+		fprintf(f, "	fifo_push(pack(value_pinc, value_pind));\n");
+		fprintf(f, "	PORTB &= ~0x02;\n");
+		fprintf(f, "}\n");
 	}
 }
 
@@ -190,9 +198,6 @@ void genfirmware(const char *file)
 		exit(1);
 	}
 
-	// disable irq for now (not working yet)
-	use_irq_trigger = false;
-
 	if (!use_irq_trigger)
 		printf("WARNING: IRQs are only used when all triggers are on D2 and/or D3!\n");
 
@@ -212,7 +217,11 @@ void genfirmware(const char *file)
 	gen_pack(f);
 	gen_fifo(f, num_bits);
 	gen_serio(f);
-	gen_trigger(f, use_irq_trigger);
+
+	if (use_irq_trigger)
+		gen_irq_trigger(f);
+	else
+		gen_trigger(f);
 
 	char header[32 + TOTAL_PIN_NUM] = "..ARDULOGIC:";
 	int hp = strlen(header);
@@ -245,33 +254,65 @@ void genfirmware(const char *file)
 		fprintf(f, "	fifo_data[fifo_in++] = 0x%02x;\n", header[i]);
 	fprintf(f, "	fifo_data[fifo_in] |= 0x80;\n");
 
-	if (use_irq_trigger) {
+	if (use_irq_trigger)
+	{
 		uint8_t eicra = 0;
 		uint8_t eimsk = 0;
-		if ((pins[PIN_D(2)] & (PIN_TRIGGER_POSEDGE|PIN_TRIGGER_NEGEDGE)) != 0) {
+
+		switch (pins[PIN_D(2)] & (PIN_TRIGGER_POSEDGE|PIN_TRIGGER_NEGEDGE))
+		{
+		case PIN_TRIGGER_POSEDGE|PIN_TRIGGER_NEGEDGE:
 			eicra |= 0x01;
 			eimsk |= 0x01;
+			break;
+		case PIN_TRIGGER_NEGEDGE:
+			eicra |= 0x02;
+			eimsk |= 0x01;
+			break;
+		case PIN_TRIGGER_POSEDGE:
+			eicra |= 0x03;
+			eimsk |= 0x01;
+			break;
 		}
-		if ((pins[PIN_D(3)] & (PIN_TRIGGER_POSEDGE|PIN_TRIGGER_NEGEDGE)) != 0) {
+
+		switch (pins[PIN_D(3)] & (PIN_TRIGGER_POSEDGE|PIN_TRIGGER_NEGEDGE))
+		{
+		case PIN_TRIGGER_POSEDGE|PIN_TRIGGER_NEGEDGE:
 			eicra |= 0x04;
 			eimsk |= 0x02;
+			break;
+		case PIN_TRIGGER_NEGEDGE:
+			eicra |= 0x06;
+			eimsk |= 0x02;
+			break;
+		case PIN_TRIGGER_POSEDGE:
+			eicra |= 0x0c;
+			eimsk |= 0x02;
+			break;
 		}
-		fprintf(f, "	check_trigger();\n");
+
+		fprintf(f, "	fifo_push(pack(PINC, PIND));\n");
 		fprintf(f, "	EICRA = 0x%02x;\n", eicra);
 		fprintf(f, "	EIMSK = 0x%02x;\n", eimsk);
 		fprintf(f, "	sei();\n");
-	}
 
-	fprintf(f, "	while ((UCSR0A & _BV(RXC0)) == 0) {\n");
-	fprintf(f, "		serio_send();\n");
-	if (!use_irq_trigger)
-		fprintf(f, "		check_trigger();\n");
-	fprintf(f, "	}\n");
+		fprintf(f, "	while ((UCSR0A & _BV(RXC0)) == 0) {\n");
+		fprintf(f, "		PINB = 0x01;\n");
+		fprintf(f, "		value_pinc = PINC;\n");
+		fprintf(f, "		value_pind = PIND;\n");
+		fprintf(f, "		serio_send();\n");
+		fprintf(f, "	}\n");
 
-	if (use_irq_trigger) {
 		fprintf(f, "	EICRA = 0;\n");
 		fprintf(f, "	EIMSK = 0;\n");
 		fprintf(f, "	cli();\n");
+	}
+	else
+	{
+		fprintf(f, "	while ((UCSR0A & _BV(RXC0)) == 0) {\n");
+		fprintf(f, "		serio_send();\n");
+		fprintf(f, "		check_trigger();\n");
+		fprintf(f, "	}\n");
 	}
 
 	fprintf(f, "	fifo_close();\n");

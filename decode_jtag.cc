@@ -60,8 +60,8 @@ static int state_idx;
 static void decoder_jtag_vcd_defs(FILE *f)
 {
 	state_idx = 16;
-	fprintf(f, "$var reg 8 n TAP_STATE_NUM $end\n");
-	fprintf(f, "$var reg %d t TAP_STATE_NAME $end\n", 12*8);
+	fprintf(f, "$var reg 8 n TAPID $end\n");
+	fprintf(f, "$var reg %d t TAP $end\n", 12*8);
 }
 
 static void bytef(FILE *f, uint8_t byte)

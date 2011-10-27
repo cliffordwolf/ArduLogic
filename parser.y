@@ -49,13 +49,15 @@ void yyerror (char const *s) {
 
 %union {
 	int num;
+	char *str;
 }
 
 %token <num> TOK_PIN
+%token <str> TOK_STRING
 
 %token TOK_TRIGGER TOK_POSEDGE TOK_NEGEDGE
 %token TOK_DECODE TOK_SPI TOK_I2C TOK_JTAG
-%token TOK_CAPTURE TOK_PULLUP TOK_EOL
+%token TOK_CAPTURE TOK_PULLUP TOK_LABEL TOK_EOL
 
 %type <num> edge neg
 
@@ -67,7 +69,7 @@ config:
 	config stmt TOK_EOL;
 
 stmt:
-	stmt_trigger | stmt_capture | stmt_pullup | stmt_decode;
+	stmt_trigger | stmt_capture | stmt_pullup | stmt_decode | stmt_label;
 
 stmt_trigger:
 	TOK_TRIGGER edge TOK_PIN {
@@ -109,6 +111,10 @@ stmt_decode:
 		pins[$5] |= PIN_CAPTURE | PIN_TRIGGER_POSEDGE | PIN_TRIGGER_NEGEDGE; // CS
 		pins[$6] |= PIN_CAPTURE; // MOSI
 		pins[$7] |= PIN_CAPTURE; // MISO
+		pin_names[$4] = "SCK";
+		pin_names[$5] = "CS";
+		pin_names[$6] = "MOSI";
+		pin_names[$7] = "MISO";
 		decode = DECODE_SPI;
 	} |
 	TOK_DECODE TOK_I2C TOK_PIN TOK_PIN {
@@ -117,6 +123,8 @@ stmt_decode:
 		decode_config[CFG_I2C_SDA] = $4;
 		pins[$3] |= PIN_CAPTURE | PIN_TRIGGER_POSEDGE | PIN_TRIGGER_NEGEDGE; // SCL
 		pins[$4] |= PIN_CAPTURE | PIN_TRIGGER_POSEDGE | PIN_TRIGGER_NEGEDGE; // SDA
+		pin_names[$3] = "SCL";
+		pin_names[$4] = "SDA";
 		decode = DECODE_I2C;
 	} |
 	TOK_DECODE TOK_JTAG TOK_PIN TOK_PIN TOK_PIN TOK_PIN {
@@ -127,8 +135,17 @@ stmt_decode:
 		pins[$3] |= PIN_TRIGGER_POSEDGE; // TCK
 		pins[$4] |= PIN_CAPTURE; // TMS
 		pins[$5] |= PIN_CAPTURE; // TDI
-		pins[$6] |= PIN_CAPTURE; // TD0
+		pins[$6] |= PIN_CAPTURE; // TDO
+		pin_names[$3] = "TCK";
+		pin_names[$4] = "TMS";
+		pin_names[$5] = "TDI";
+		pin_names[$6] = "TDO";
 		decode = DECODE_JTAG;
+	};
+
+stmt_label:
+	TOK_LABEL TOK_PIN TOK_STRING {
+		pin_names[$2] = $3;
 	};
 
 edge:

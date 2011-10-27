@@ -40,11 +40,18 @@ D[2-7] {
 	return TOK_PIN;
 }
 
+\"[#-~]+\" {
+	yylval.str = strdup(yytext);
+	yylval.str[strlen(yylval.str)-1] = 0;
+	return TOK_STRING;
+}
+
 "trigger"	{ return TOK_TRIGGER; }
 "posedge"	{ return TOK_POSEDGE; }
 "negedge"	{ return TOK_NEGEDGE; }
 "capture"	{ return TOK_CAPTURE; }
 "pullup"	{ return TOK_PULLUP; }
+"label"		{ return TOK_LABEL; }
 
 "decode"	{ return TOK_DECODE; }
 "spi"		{ return TOK_SPI; }

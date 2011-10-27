@@ -75,6 +75,13 @@ pullup <PIN> [...]
 
 Enable the internal AVR pullup resistors on the specified pin(s).
 
+label <PIN> "<NAME>"
+--------------------
+
+Rename a PIN to the given name. This only changes the PIN label
+in the generated VCD file. All commands in the config file must still
+use the regaluar "An" or "Dn" pin names to refer to the pins in question.
+
 decode spi <EDGE> <PIN-SCK> [!] <PIN-CS> <PIN-MOSI> <PIN-MISO>
 --------------------------------------------------------------
 

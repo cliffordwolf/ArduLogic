@@ -58,13 +58,15 @@ void writevcd(const char *file)
 	fprintf(f, " $end\n");
 
 	for (size_t i = 1; i < samples.size(); i++) {
+		if ((samples[i-1] ^ samples[i]) == 0)
+			continue;
 		fprintf(f, "#%zd", i);
-		for (int i = 0; i < TOTAL_PIN_NUM; i++) {
-			if ((pins[i] & PIN_CAPTURE) == 0)
+		for (int j = 0; j < TOTAL_PIN_NUM; j++) {
+			if ((pins[j] & PIN_CAPTURE) == 0)
 				continue;
-			if (((samples[i-1] ^ samples[i]) & (1 << i)) == 0)
+			if (((samples[i-1] ^ samples[i]) & (1 << j)) == 0)
 				continue;
-			fprintf(f, " %dp%d", (samples[i] & (1 << i)) != 0, i);
+			fprintf(f, " %dp%d", (samples[i] & (1 << j)) != 0, j);
 		}
 		fprintf(f, "\n");
 	}

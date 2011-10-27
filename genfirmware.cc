@@ -120,9 +120,10 @@ static void gen_serio(FILE *f)
 #endif
 }
 
-static void gen_trigger(FILE *f)
+static void gen_trigger(FILE *f, bool use_irq_trigger)
 {
 	fprintf(f, "static uint8_t trigger_state = 0x80;\n");
+
 	fprintf(f, "static void check_trigger() {\n");
 	fprintf(f, "	uint8_t value_pinc = PINC;\n");
 	fprintf(f, "	uint8_t value_pind = PIND;\n");
@@ -160,11 +161,16 @@ static void gen_trigger(FILE *f)
 	fprintf(f, "	fifo_push(pack(value_pinc, value_pind));\n");
 	fprintf(f, "	PORTB &= ~0x03;\n");
 	fprintf(f, "}\n");
+
+	if (use_irq_trigger) {
+		fprintf(f, "ISR(INT0_vect) { check_trigger(); }\n");
+		fprintf(f, "ISR(INT1_vect) { check_trigger(); }\n");
+	}
 }
 
 void genfirmware(const char *file)
 {
-	int use_irq_trigger = 1;
+	bool use_irq_trigger = true;
 	int num_trigger = 0;
 	int num_bits = 0;
 
@@ -176,13 +182,16 @@ void genfirmware(const char *file)
 		if (i == PIN_D(2) || i == PIN_D(3))
 			continue;
 		if ((pins[i] & (PIN_TRIGGER_POSEDGE|PIN_TRIGGER_NEGEDGE)) != 0)
-			use_irq_trigger = 0;
+			use_irq_trigger = false;
 	}
 
 	if (num_trigger > 7) {
 		fprintf(stderr, "A maximum of 7 trigger pins is supported by the firmware generator.\n");
 		exit(1);
 	}
+
+	// disable irq for now (not working yet)
+	use_irq_trigger = false;
 
 	if (!use_irq_trigger)
 		printf("WARNING: IRQs are only used when all triggers are on D2 and/or D3!\n");
@@ -197,12 +206,13 @@ void genfirmware(const char *file)
 	fprintf(f, "#include <stdbool.h>\n");
 	fprintf(f, "#include <avr/io.h>\n");
 	fprintf(f, "#include <avr/sleep.h>\n");
+	fprintf(f, "#include <avr/interrupt.h>\n");
 	fprintf(f, "typedef uint%d_t smplword_t;\n", num_bits <= 8 ? 8 : 16);
 
 	gen_pack(f);
 	gen_fifo(f, num_bits);
 	gen_serio(f);
-	gen_trigger(f);
+	gen_trigger(f, use_irq_trigger);
 
 	char header[32 + TOTAL_PIN_NUM] = "..ARDULOGIC:";
 	int hp = strlen(header);
@@ -234,10 +244,36 @@ void genfirmware(const char *file)
 	for (int i = 0; i < hp; i++)
 		fprintf(f, "	fifo_data[fifo_in++] = 0x%02x;\n", header[i]);
 	fprintf(f, "	fifo_data[fifo_in] |= 0x80;\n");
+
+	if (use_irq_trigger) {
+		uint8_t eicra = 0;
+		uint8_t eimsk = 0;
+		if ((pins[PIN_D(2)] & (PIN_TRIGGER_POSEDGE|PIN_TRIGGER_NEGEDGE)) != 0) {
+			eicra |= 0x01;
+			eimsk |= 0x01;
+		}
+		if ((pins[PIN_D(3)] & (PIN_TRIGGER_POSEDGE|PIN_TRIGGER_NEGEDGE)) != 0) {
+			eicra |= 0x04;
+			eimsk |= 0x02;
+		}
+		fprintf(f, "	check_trigger();\n");
+		fprintf(f, "	EICRA = 0x%02x;\n", eicra);
+		fprintf(f, "	EIMSK = 0x%02x;\n", eimsk);
+		fprintf(f, "	sei();\n");
+	}
+
 	fprintf(f, "	while ((UCSR0A & _BV(RXC0)) == 0) {\n");
 	fprintf(f, "		serio_send();\n");
-	fprintf(f, "		check_trigger();\n");
+	if (!use_irq_trigger)
+		fprintf(f, "		check_trigger();\n");
 	fprintf(f, "	}\n");
+
+	if (use_irq_trigger) {
+		fprintf(f, "	EICRA = 0;\n");
+		fprintf(f, "	EIMSK = 0;\n");
+		fprintf(f, "	cli();\n");
+	}
+
 	fprintf(f, "	fifo_close();\n");
 	fprintf(f, "	while (fifo_in != fifo_out)\n");
 	fprintf(f, "		serio_send();\n");

@@ -4,7 +4,8 @@ CXX = g++
 
 LDLIBS += -lstdc++
 
-ardulogic: ardulogic.o parser.o lexer.o genfirmware.o readdata.o writevcd.o
+ardulogic: ardulogic.o parser.o lexer.o genfirmware.o readdata.o writevcd.o \
+		decode_jtag.o
 
 parser.cc parser.hh: parser.y
 	bison -o parser.cc -d parser.y

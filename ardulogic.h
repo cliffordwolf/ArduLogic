@@ -23,6 +23,7 @@
 #define ARDULOGIC_H
 
 #include <stdint.h>
+#include <stdio.h>
 #include <vector>
 
 #define PIN_A(__n) (__n)
@@ -66,5 +67,15 @@ void readdata(const char *tts);
 void writevcd(const char *file);
 
 extern bool verbose;
+
+struct decoder_desc {
+	void (*vcd_defs)(FILE *f);
+	void (*vcd_init)(FILE *f);
+	void (*vcd_step)(FILE *f, size_t i);
+};
+
+extern struct decoder_desc decoder_spi;
+extern struct decoder_desc decoder_i2c;
+extern struct decoder_desc decoder_jtag;
 
 #endif

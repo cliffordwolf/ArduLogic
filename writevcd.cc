@@ -73,7 +73,7 @@ void writevcd(const char *file)
 	fprintf(f, " $end\n");
 
 	for (size_t i = 1; i < samples.size(); i++) {
-		fprintf(f, "#%zd 1c", i*10);
+		fprintf(f, "#%zd", i*10);
 		for (int j = 0; j < TOTAL_PIN_NUM; j++) {
 			if ((pins[j] & PIN_CAPTURE) == 0)
 				continue;
@@ -83,7 +83,7 @@ void writevcd(const char *file)
 		}
 		if (decoder)
 			decoder->vcd_step(f, i);
-		fprintf(f, "\n#%zd 0c\n", i*10+3);
+		fprintf(f, "\n#%zd 1c #%zd 0c\n", i*10+3, i*10+7);
 	}
 	fprintf(f, "#%zd\n", samples.size());
 

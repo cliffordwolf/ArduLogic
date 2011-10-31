@@ -62,7 +62,6 @@ static void gen_pack(FILE *f)
 static void gen_fifo(FILE *f, int num_bits)
 {
 	fprintf(f, "static void serio_send();\n");
-	fprintf(f, "volatile uint8_t error_code = 0;\n");
 	fprintf(f, "volatile uint8_t fifo_data[256];\n");
 	fprintf(f, "volatile uint8_t fifo_in = 0, fifo_out = 0;\n");
 	fprintf(f, "uint8_t fifo_bits = 7;\n");
@@ -75,8 +74,11 @@ static void gen_fifo(FILE *f, int num_bits)
 	fprintf(f, "	fifo_data[++fifo_in] = 0x80;\n");
 	fprintf(f, "	fifo_bits = 7;\n");
 	fprintf(f, "}\n");
+	fprintf(f, "volatile bool fifo_push_en = 0;\n");
 	fprintf(f, "static inline void fifo_push(smplword_t w) {\n");
 	fprintf(f, "	uint8_t bits = %d;\n", num_bits);
+	fprintf(f, "	if (!fifo_push_en)\n");
+	fprintf(f, "		return;\n");
 	fprintf(f, "	do {\n");
 	fprintf(f, "		uint8_t bc = bits > fifo_bits ? fifo_bits : bits;\n");
 	fprintf(f, "		fifo_data[fifo_in] |= w << (7-fifo_bits);\n");
@@ -221,6 +223,7 @@ void genfirmware(const char *file)
 	fprintf(f, "#include <avr/sleep.h>\n");
 	fprintf(f, "#include <avr/interrupt.h>\n");
 	fprintf(f, "typedef uint%d_t smplword_t;\n", num_bits <= 8 ? 8 : 16);
+	fprintf(f, "volatile uint8_t error_code = 0;\n");
 
 	gen_pack(f);
 	gen_fifo(f, num_bits);
@@ -299,17 +302,22 @@ void genfirmware(const char *file)
 			break;
 		}
 
+		fprintf(f, "	fifo_push_en = true;\n");
 		fprintf(f, "	fifo_push(pack(PINC, PIND));\n");
+		fprintf(f, "	fifo_push_en = false;\n");
+
 		fprintf(f, "	EICRA = 0x%02x;\n", eicra);
 		fprintf(f, "	EIMSK = 0x%02x;\n", eimsk);
 		fprintf(f, "	sei();\n");
 
+		fprintf(f, "	fifo_push_en = true;\n");
 		fprintf(f, "	while ((UCSR0A & _BV(RXC0)) == 0) {\n");
 		fprintf(f, "		PINB = 0x01;\n");
 		fprintf(f, "		// value_pinc = PINC;\n");
 		fprintf(f, "		// value_pind = PIND;\n");
 		fprintf(f, "		serio_send();\n");
 		fprintf(f, "	}\n");
+		fprintf(f, "	fifo_push_en = false;\n");
 
 		fprintf(f, "	EICRA = 0;\n");
 		fprintf(f, "	EIMSK = 0;\n");
@@ -317,10 +325,12 @@ void genfirmware(const char *file)
 	}
 	else
 	{
+		fprintf(f, "	fifo_push_en = true;\n");
 		fprintf(f, "	while ((UCSR0A & _BV(RXC0)) == 0) {\n");
 		fprintf(f, "		serio_send();\n");
 		fprintf(f, "		check_trigger();\n");
 		fprintf(f, "	}\n");
+		fprintf(f, "	fifo_push_en = false;\n");
 	}
 
 	fprintf(f, "	fifo_close();\n");

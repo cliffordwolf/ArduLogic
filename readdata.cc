@@ -62,7 +62,7 @@ static unsigned char serialread()
 			else if (ch > 127)
 				printf("<0x%02x:0b%d%d%d%d%d%d%d%d>\n", ch,
 						(ch & 0x80) != 0, (ch & 0x40) != 0,
-						(ch & 0x20) != 0, (ch & 0x01) != 0,
+						(ch & 0x20) != 0, (ch & 0x10) != 0,
 						(ch & 0x08) != 0, (ch & 0x04) != 0,
 						(ch & 0x02) != 0, (ch & 0x01) != 0);
 			else

@@ -58,15 +58,15 @@ static unsigned char serialread()
 	if (rc == 1) {
 		if (verbose) {
 			if (32 < ch && ch < 127)
-				printf("<%2x:%c>\n", ch, ch);
+				printf("<0x%02x:'%c'>\n", ch, ch);
 			else if (ch > 127)
-				printf("<%2x:%d%d%d%d%d%d%d%d>\n", ch,
+				printf("<0x%02x:0b%d%d%d%d%d%d%d%d>\n", ch,
 						(ch & 0x80) != 0, (ch & 0x40) != 0,
 						(ch & 0x20) != 0, (ch & 0x01) != 0,
 						(ch & 0x08) != 0, (ch & 0x04) != 0,
 						(ch & 0x02) != 0, (ch & 0x01) != 0);
 			else
-				printf("<%2x>\n", ch);
+				printf("<0x%02x>\n", ch);
 		}
 		return ch;
 	}
@@ -94,7 +94,8 @@ static size_t get_numwords(std::vector<uint8_t> &data, size_t bits)
 {
 	size_t total_bits = get_numbits(data);
 	if (total_bits % bits != 0) {
-		fprintf(stderr, "Data encoding boundary error on tts `%s'.\n", tts_name);
+		fprintf(stderr, "Data encoding boundary error on tts `%s' (total_bits=%d, chunk_bits=%d).\n",
+				tts_name, total_bits, bits);
 		exit(1);
 	}
 	return total_bits / bits;
@@ -159,14 +160,17 @@ void readdata(const char *tts)
 	printf("Recording. Press Ctrl-C to stop.\n");
 	old_hdl = signal(SIGINT, &sigint_hdl);
 
+	uint8_t error_code;
 	std::vector<uint8_t> data;
 	while (1)
 	{
 		unsigned char ch = serialread();
 		if (ch == 0) {
 			ch = serialread();
-			if (ch == 1)
+			if (ch == 1) {
+				error_code = serialread();
 				break;
+			}
 			goto encoder_error;
 		}
 		if ((ch & 0x80) == 0) {
@@ -187,6 +191,11 @@ void readdata(const char *tts)
 
 	tcsetattr(fd, TCSAFLUSH, &tcattr_old);
 	close(fd);
+
+	if (error_code) {
+		fprintf(stderr, "Probe reported error 0x%02x.\n", error_code);
+		exit(1);
+	}
 
 	int num_bits = 0;
 	int bit2pin[16] = { /* zeros */ };

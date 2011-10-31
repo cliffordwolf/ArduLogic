@@ -62,13 +62,16 @@ static void gen_pack(FILE *f)
 static void gen_fifo(FILE *f, int num_bits)
 {
 	fprintf(f, "static void serio_send();\n");
-	fprintf(f, "uint8_t fifo_data[256], fifo_bits = 7;\n");
+	fprintf(f, "volatile uint8_t error_code = 0;\n");
+	fprintf(f, "volatile uint8_t fifo_data[256];\n");
 	fprintf(f, "volatile uint8_t fifo_in = 0, fifo_out = 0;\n");
-	fprintf(f, "static inline bool fifo_empty() { return fifo_in == fifo_out; }\n");
-	fprintf(f, "static inline uint8_t fifo_shift() { return fifo_data[fifo_out++]; }\n");
+	fprintf(f, "uint8_t fifo_bits = 7;\n");
 	fprintf(f, "static inline void fifo_next() {\n");
-	fprintf(f, "	while (fifo_in+1 == fifo_out)\n");
+	fprintf(f, "	while (fifo_in+1 == fifo_out) {\n");
+	fprintf(f, "		error_code |= 0x01;\n");
+	fprintf(f, "		PORTB |= 0x20;\n");
 	fprintf(f, "		serio_send();\n");
+	fprintf(f, "	}\n");
 	fprintf(f, "	fifo_data[++fifo_in] = 0x80;\n");
 	fprintf(f, "	fifo_bits = 7;\n");
 	fprintf(f, "}\n");
@@ -108,9 +111,12 @@ static void gen_serio(FILE *f)
 	fprintf(f, "static void serio_send() {\n");
 	fprintf(f, "	if (fifo_in == fifo_out)\n");
 	fprintf(f, "		return;\n");
+	fprintf(f, "	PORTB |= 0x04;\n");
 	fprintf(f, "	if ((UCSR0A & _BV(UDRE0)) == 0)\n");
 	fprintf(f, "		return;\n");
-	fprintf(f, "	UDR0 = fifo_data[fifo_out++];\n");
+	fprintf(f, "	UDR0 = fifo_data[fifo_out];\n");
+	fprintf(f, "	fifo_out++;\n");
+	fprintf(f, "	PINB = 0x0c;\n");
 	fprintf(f, "}\n");
 #if 0
 	fprintf(f, "static void serio_sendbyte(uint8_t ch) {\n");
@@ -165,10 +171,12 @@ static void gen_trigger(FILE *f)
 
 static void gen_irq_trigger(FILE *f)
 {
-	fprintf(f, "volatile uint8_t value_pinc;\n");
-	fprintf(f, "volatile uint8_t value_pind;\n");
+	fprintf(f, "// volatile uint8_t value_pinc;\n");
+	fprintf(f, "// volatile uint8_t value_pind;\n");
 	for (int i=0; i<2; i++) {
 		fprintf(f, "ISR(INT%d_vect) {\n", i);
+		fprintf(f, "	uint8_t value_pinc = PINC;\n");
+		fprintf(f, "	uint8_t value_pind = PIND;\n");
 		fprintf(f, "	PORTB |= 0x02;\n");
 		fprintf(f, "	fifo_push(pack(value_pinc, value_pind));\n");
 		fprintf(f, "	PORTB &= ~0x02;\n");
@@ -243,7 +251,7 @@ void genfirmware(const char *file)
 	}
 
 	fprintf(f, "int main() {\n");
-	fprintf(f, "	DDRB = 0x03;\n");
+	fprintf(f, "	DDRB = 0x3f;\n");
 	fprintf(f, "	DDRC = 0;\n");
 	fprintf(f, "	DDRD = 0;\n");
 	fprintf(f, "	PORTB = 0;\n");
@@ -298,8 +306,8 @@ void genfirmware(const char *file)
 
 		fprintf(f, "	while ((UCSR0A & _BV(RXC0)) == 0) {\n");
 		fprintf(f, "		PINB = 0x01;\n");
-		fprintf(f, "		value_pinc = PINC;\n");
-		fprintf(f, "		value_pind = PIND;\n");
+		fprintf(f, "		// value_pinc = PINC;\n");
+		fprintf(f, "		// value_pind = PIND;\n");
 		fprintf(f, "		serio_send();\n");
 		fprintf(f, "	}\n");
 
@@ -320,6 +328,7 @@ void genfirmware(const char *file)
 	fprintf(f, "		serio_send();\n");
 	fprintf(f, "	fifo_data[fifo_in++] = 0;\n");
 	fprintf(f, "	fifo_data[fifo_in++] = 1;\n");
+	fprintf(f, "	fifo_data[fifo_in++] = error_code;\n");
 	fprintf(f, "	while (fifo_in != fifo_out)\n");
 	fprintf(f, "		serio_send();\n");
 	fprintf(f, "	return 0;\n");

@@ -21,6 +21,16 @@ as probe. The following pins on the Arduino can be used for probing:
 	   A4       |  PINC4  | A4
 	   A5       |  PINC5  | A5
 
+Additionally the following PINs provide additional debug information:
+
+	Arduino PIN | AVR Pin | ArduLogic Debug Function
+	------------+---------+--------------------------------
+	    8       |  PINB0  | Checking trigger (non IRQ mode)
+	    9       |  PINB1  | Processing trigger
+	   10       |  PINB2  | Serial activity (pulse)
+	   11       |  PINB3  | Serial activity (toggle)
+	   13 (LED) |  PINB5  | Error indicator
+
 ArduLogic can use any pin as trigger pin (clock signals, etc), but IRQs are
 only used when all triggers are on the pins D2 and/or D3. So it is highly
 recommended to connect clock lines or other trigger lines to eighter pin

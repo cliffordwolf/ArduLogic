@@ -64,11 +64,12 @@ extern const char *pin_names[TOTAL_PIN_NUM];
 extern std::vector<uint16_t> samples;
 
 void config(const char *file);
-void genfirmware(const char *file);
-void readdata(const char *tts);
+void genfirmware(const char *tts);
+void readdata(const char *tts, bool autoprog);
 void writevcd(const char *file);
 
 extern const char *vcd_prefix;
+extern bool dont_cleanup_fwsrc;
 extern bool verbose;
 
 struct decoder_desc {

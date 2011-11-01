@@ -199,7 +199,7 @@ static void gen_trigger(FILE *f)
 	fprintf(f, "}\n");
 }
 
-void genfirmware(const char *file)
+void genfirmware(const char *tts)
 {
 	bool use_irq_trigger = true;
 	int num_trigger = 0;
@@ -229,9 +229,9 @@ void genfirmware(const char *file)
 	if (!use_irq_trigger)
 		printf("WARNING: IRQs are only used when all triggers are on D2 and/or D3!\n");
 
-	FILE *f = fopen(file, "w");
+	FILE *f = fopen(".ardulogic_tmp.firmware.c", "w");
 	if (!f) {
-		fprintf(stderr, "Can't create firmware source file `%s': %s\n", file, strerror(errno));
+		fprintf(stderr, "Can't create firmware source file `.ardulogic_tmp.firmware.c': %s\n", strerror(errno));
 		exit(1);
 	}
 
@@ -451,5 +451,21 @@ void genfirmware(const char *file)
 	fprintf(f, "}\n");
 
 	fclose(f);
+
+	if (tts) {
+		setenv("ARDUINO_TTY", tts, 1);
+		int rc = system("set -x; avr-gcc -Wall -std=gnu99 -O3 -o .ardulogic_tmp.firmware.elf -mmcu=atmega328p -DF_CPU=16000000L .ardulogic_tmp.firmware.c");
+		rc = rc ?: system("set -x; avr-objcopy -j .text -j .data -O ihex .ardulogic_tmp.firmware.elf .ardulogic_tmp.firmware.hex");
+		rc = rc ?: system("set -x; avrdude -p m328p -b 115200 -c arduino -P \"$ARDUINO_TTY\" -v -U \"flash:w:.ardulogic_tmp.firmware.hex\"");
+		if (dont_cleanup_fwsrc == false) {
+			remove(".ardulogic_tmp.firmware.c");
+			remove(".ardulogic_tmp.firmware.elf");
+			remove(".ardulogic_tmp.firmware.hex");
+		}
+		if (rc) {
+			fprintf(stderr, "Error while compiling firmware or programming the arduino!\n");
+			exit(1);
+		}
+	}
 }
 

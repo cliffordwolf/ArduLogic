@@ -48,7 +48,21 @@ static void sigint_hdl(int dummy)
 
 static void sigalrm_hdl(int dummy)
 {
-	printf("Please push the reset button on the Arduino.\n");
+	printf("\n");
+	printf("-- no response from device --\n");
+	printf("\n");
+	printf("This could have multiple reasons:\n");
+	printf("\n");
+	printf("1. There is no ArduLogic firmware on the device yet.\n");
+	printf("Solution: Re-run with the `-p' command line option set.\n");
+	printf("\n");
+	printf("2. The Arduino is connected to a different serial device.\n");
+	printf("Solution: Pass the correct serial device name using the `-t'\n");
+	printf("command line option.\n");
+	printf("\n");
+	printf("3. Automatic reset via USB is disabled on your Arduino.\n");
+	printf("solution: Push the reset button on the Arduino now.\n");
+	printf("\n");
 }
 
 static unsigned char serialread()
@@ -109,7 +123,7 @@ static uint16_t get_word(std::vector<uint8_t> &data, size_t num, size_t bits)
 	return value;
 }
 
-void readdata(const char *tts)
+void readdata(const char *tts, bool autoprog)
 {
 	printf("Connecting to Arduino on `%s'..\n", tts);
 	tts_name = tts;
@@ -143,7 +157,16 @@ void readdata(const char *tts)
 	while (idx != hp) {
 		unsigned char ch = serialread();
 		if (header[idx] != ch) {
-			if (idx > hdrlen && ch != 0) {
+			if (idx >= hdrlen && ch != 0) {
+				if (autoprog) {
+					alarm(0);
+					signal(SIGALRM, old_hdl);
+					close(fd);
+					fprintf(stderr, "Firmware doesn't match configuration. Reprogramming probe.\n");
+					genfirmware(tts);
+					readdata(tts, false);
+					return;
+				}
 				fprintf(stderr, "Firmware doesn't match configuration. Re-run with -p.\n");
 				exit(1);
 			}

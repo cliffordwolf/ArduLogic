@@ -37,6 +37,7 @@ const char *pin_names[TOTAL_PIN_NUM] = {
 std::vector<uint16_t> samples;
 
 const char *vcd_prefix = "";
+bool dont_cleanup_fwsrc;
 bool verbose;
 
 void help(const char *progname)
@@ -49,8 +50,7 @@ int main(int argc, char **argv)
 {
 	int opt;
 	const char *ttydev = "/dev/ttyACM0";
-	int programm_arduino = 0;
-	int dont_cleanup = 0;
+	bool programm_arduino = false;
 
 	while ((opt = getopt(argc, argv, "vpnP:t:")) != -1) {
 		switch (opt) {
@@ -58,10 +58,10 @@ int main(int argc, char **argv)
 			verbose = true;
 			break;
 		case 'p':
-			programm_arduino = 1;
+			programm_arduino = true;
 			break;
 		case 'n':
-			dont_cleanup = 1;
+			dont_cleanup_fwsrc = true;
 			break;
 		case 'P':
 			vcd_prefix = optarg;
@@ -80,23 +80,11 @@ int main(int argc, char **argv)
 	config(argv[optind]);
 
 	if (programm_arduino) {
-		genfirmware(".ardulogic_tmp.firmware.c");
-		setenv("ARDUINO_TTY", ttydev, 1);
-		int rc = system("set -x; avr-gcc -Wall -std=gnu99 -O3 -o .ardulogic_tmp.firmware.elf -mmcu=atmega328p -DF_CPU=16000000L .ardulogic_tmp.firmware.c");
-		rc = rc ?: system("set -x; avr-objcopy -j .text -j .data -O ihex .ardulogic_tmp.firmware.elf .ardulogic_tmp.firmware.hex");
-		rc = rc ?: system("set -x; avrdude -p m328p -b 115200 -c arduino -P \"$ARDUINO_TTY\" -v -U \"flash:w:.ardulogic_tmp.firmware.hex\"");
-		if (!dont_cleanup) {
-			remove(".ardulogic_tmp.firmware.c");
-			remove(".ardulogic_tmp.firmware.elf");
-			remove(".ardulogic_tmp.firmware.hex");
-		}
-		if (rc) {
-			fprintf(stderr, "Error while compiling firmware or programming the arduino!\n");
-			exit(1);
-		}
+		genfirmware(ttydev);
+		readdata(ttydev, false);
+	} else {
+		readdata(ttydev, true);
 	}
-
-	readdata(ttydev);
 	writevcd(argv[optind+1]);
 
 	return 0;

@@ -29,6 +29,7 @@ Additionally the following PINs provide additional debug information:
 	    9       |  PINB1  | Processing trigger
 	   10       |  PINB2  | Serial activity (pulse)
 	   11       |  PINB3  | Serial activity (toggle)
+	   12       |  PINB4  | Capture in progress
 	   13 (LED) |  PINB5  | Error indicator
 
 ArduLogic can use any pin as trigger pin (clock signals, etc), but IRQs are

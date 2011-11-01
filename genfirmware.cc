@@ -311,25 +311,29 @@ void genfirmware(const char *file)
 		fprintf(f, "	sei();\n");
 
 		fprintf(f, "	fifo_push_en = true;\n");
+		fprintf(f, "	PORTB |= 0x10;\n");
 		fprintf(f, "	while ((UCSR0A & _BV(RXC0)) == 0) {\n");
 		fprintf(f, "		PINB = 0x01;\n");
 		fprintf(f, "		// value_pinc = PINC;\n");
 		fprintf(f, "		// value_pind = PIND;\n");
 		fprintf(f, "		serio_send();\n");
 		fprintf(f, "	}\n");
+		fprintf(f, "	PORTB &= ~0x10;\n");
 		fprintf(f, "	fifo_push_en = false;\n");
 
-		fprintf(f, "	EICRA = 0;\n");
-		fprintf(f, "	EIMSK = 0;\n");
-		fprintf(f, "	cli();\n");
+		fprintf(f, "	// EICRA = 0;\n");
+		fprintf(f, "	// EIMSK = 0;\n");
+		fprintf(f, "	// cli();\n");
 	}
 	else
 	{
 		fprintf(f, "	fifo_push_en = true;\n");
+		fprintf(f, "	PORTB |= 0x10;\n");
 		fprintf(f, "	while ((UCSR0A & _BV(RXC0)) == 0) {\n");
 		fprintf(f, "		serio_send();\n");
 		fprintf(f, "		check_trigger();\n");
 		fprintf(f, "	}\n");
+		fprintf(f, "	PORTB &= ~0x10;\n");
 		fprintf(f, "	fifo_push_en = false;\n");
 	}
 
@@ -339,7 +343,7 @@ void genfirmware(const char *file)
 	fprintf(f, "	fifo_data[fifo_in++] = 0;\n");
 	fprintf(f, "	fifo_data[fifo_in++] = 1;\n");
 	fprintf(f, "	fifo_data[fifo_in++] = error_code;\n");
-	fprintf(f, "	while (fifo_in != fifo_out)\n");
+	fprintf(f, "	while (1)\n");
 	fprintf(f, "		serio_send();\n");
 	fprintf(f, "	return 0;\n");
 	fprintf(f, "}\n");

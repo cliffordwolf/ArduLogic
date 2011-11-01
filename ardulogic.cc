@@ -35,11 +35,12 @@ const char *pin_names[TOTAL_PIN_NUM] = {
 	"D2", "D3", "D4", "D5", "D6", "D7" };
 std::vector<uint16_t> samples;
 
+const char *vcd_prefix = "";
 bool verbose;
 
 void help(const char *progname)
 {
-	fprintf(stderr, "Usage: %s [-v] [-p [-n]] [-t <dev>] <configfile> <vcdfile>\n", progname);
+	fprintf(stderr, "Usage: %s [-v] [-p [-n]] [ -P vcd_prefix ] [-t <dev>] <configfile> <vcdfile>\n", progname);
 	exit(1);
 }
 
@@ -50,7 +51,7 @@ int main(int argc, char **argv)
 	int programm_arduino = 0;
 	int dont_cleanup = 0;
 
-	while ((opt = getopt(argc, argv, "vpnt:")) != -1) {
+	while ((opt = getopt(argc, argv, "vpnP:t:")) != -1) {
 		switch (opt) {
 		case 'v':
 			verbose = true;
@@ -60,6 +61,9 @@ int main(int argc, char **argv)
 			break;
 		case 'n':
 			dont_cleanup = 1;
+			break;
+		case 'P':
+			vcd_prefix = optarg;
 			break;
 		case 't':
 			ttydev = optarg;

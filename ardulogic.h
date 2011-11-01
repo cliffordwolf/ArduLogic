@@ -66,6 +66,7 @@ void genfirmware(const char *file);
 void readdata(const char *tts);
 void writevcd(const char *file);
 
+extern const char *vcd_prefix;
 extern bool verbose;
 
 struct decoder_desc {

@@ -60,8 +60,8 @@ static int state_idx;
 static void decoder_jtag_vcd_defs(FILE *f)
 {
 	state_idx = 16;
-	fprintf(f, "$var reg 8 n TAPID $end\n");
-	fprintf(f, "$var reg %d t TAP $end\n", 12*8);
+	fprintf(f, "$var reg 8 %sn %sTAPID $end\n", vcd_prefix, vcd_prefix);
+	fprintf(f, "$var reg %d %st %sTAP $end\n", 12*8, vcd_prefix, vcd_prefix);
 }
 
 static void bytef(FILE *f, uint8_t byte)
@@ -74,10 +74,10 @@ static void decoder_jtag_vcd_init(FILE *f)
 {
 	fprintf(f, " b");
 	bytef(f, state_idx);
-	fprintf(f, " n b");
+	fprintf(f, " %sn b", vcd_prefix);
 	for (int i = 0; i < 12; i++)
 		bytef(f, tap_states[state_idx].name[i]);
-	fprintf(f, " t");
+	fprintf(f, " %st", vcd_prefix);
 }
 
 static void decoder_jtag_vcd_step(FILE *f, size_t i)

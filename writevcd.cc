@@ -44,10 +44,10 @@ void writevcd(const char *file)
 		decoder = &decoder_jtag;
 
 	fprintf(f, "$comment Created by ArduLogic $end\n");
-	fprintf(f, "$var reg 1 c clk $end\n");
+	fprintf(f, "$var reg 1 %sc %sclk $end\n", vcd_prefix, vcd_prefix);
 	for (int i = 0; i < TOTAL_PIN_NUM; i++)
 		if ((pins[i] & PIN_CAPTURE) != 0)
-			fprintf(f, "$var reg 1 p%d %s $end\n", i, pin_names[i]);
+			fprintf(f, "$var reg 1 %sp%d %s%s $end\n", vcd_prefix, i, vcd_prefix, pin_names[i]);
 	if (decoder)
 		decoder->vcd_defs(f);
 	fprintf(f, "$enddefinitions\n");
@@ -64,10 +64,10 @@ void writevcd(const char *file)
 		return;
 	}
 
-	fprintf(f, "#0 $dumpall 0c");
+	fprintf(f, "#0 $dumpall 0%sc", vcd_prefix);
 	for (int i = 0; i < TOTAL_PIN_NUM; i++)
 		if ((pins[i] & PIN_CAPTURE) != 0)
-			fprintf(f, " %dp%d", (samples[0] & (1 << i)) != 0, i);
+			fprintf(f, " %d%sp%d", (samples[0] & (1 << i)) != 0, vcd_prefix, i);
 	if (decoder)
 		decoder->vcd_init(f);
 	fprintf(f, " $end\n");
@@ -79,11 +79,11 @@ void writevcd(const char *file)
 				continue;
 			if (((samples[i-1] ^ samples[i]) & (1 << j)) == 0)
 				continue;
-			fprintf(f, " %dp%d", (samples[i] & (1 << j)) != 0, j);
+			fprintf(f, " %d%sp%d", (samples[i] & (1 << j)) != 0, vcd_prefix, j);
 		}
 		if (decoder)
 			decoder->vcd_step(f, i);
-		fprintf(f, "\n#%zd 1c #%zd 0c\n", i*10+3, i*10+7);
+		fprintf(f, "\n#%zd 1%sc #%zd 0%sc\n", i*10+3, vcd_prefix, i*10+7, vcd_prefix);
 	}
 	fprintf(f, "#%zd\n", samples.size());
 

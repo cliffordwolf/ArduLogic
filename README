@@ -73,6 +73,14 @@ Not that `trigger' statements can't be used together with `decode'
 statements in the same configuration file. But it is perfectly fine
 to use as many `trigger' statements in a configuration file as you want.
 
+trigger <Frequency>
+-------------------
+
+Instead of trigger on any specific event it is possible to simply
+use a free running trigger with the specified frequency. The
+frequency must be specified using the syntax <n>Hz or <n>kHz where
+<n> is an integer number.
+
 capture <PIN> [...]
 -------------------
 

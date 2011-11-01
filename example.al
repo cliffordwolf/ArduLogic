@@ -10,6 +10,16 @@
 # pullup D2 D3 D4 D5 D6 D7
 
 ###
+### Capure data with free running trigger
+###
+# label D2 "TCK"
+# label D3 "TMS"
+# label D4 "TDI"
+# label D5 "TDO"
+# capture D2 D3 D4 D5
+# trigger 19kHz
+
+###
 ### Decode SPI Data
 ###
 ### SCK  = D2 (on positive edge)
@@ -35,5 +45,5 @@
 ### TDI = D4
 ### TDO = D5
 ###
-decode jtag D2 D3 D4 D5
+# decode jtag D2 D3 D4 D5
 

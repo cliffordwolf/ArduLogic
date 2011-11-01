@@ -41,9 +41,19 @@ D[2-7] {
 }
 
 \"[#-~]+\" {
-	yylval.str = strdup(yytext);
+	yylval.str = strdup(yytext+1);
 	yylval.str[strlen(yylval.str)-1] = 0;
 	return TOK_STRING;
+}
+
+[0-9]+Hz {
+	yylval.num = atoi(yytext);
+	return TOK_FREQ;
+}
+
+[0-9]+kHz {
+	yylval.num = 1000 * atoi(yytext);
+	return TOK_FREQ;
 }
 
 "trigger"	{ return TOK_TRIGGER; }

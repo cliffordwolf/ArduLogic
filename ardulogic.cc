@@ -29,6 +29,7 @@
 
 int decode;
 int decode_config[CFG_WORDS];
+int trigger_freq;
 int pins[TOTAL_PIN_NUM];
 const char *pin_names[TOTAL_PIN_NUM] = {
 	"A0", "A1", "A2", "A3", "A4", "A5",

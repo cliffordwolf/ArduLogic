@@ -129,14 +129,12 @@ void readdata(const char *tts)
 	cfsetspeed(&tcattr, B115200);
 	tcsetattr(fd, TCSAFLUSH, &tcattr);
 
-	char header[32 + TOTAL_PIN_NUM] = "..ARDULOGIC:";
+	char header[100 + TOTAL_PIN_NUM] = "..ARDULOGIC:";
 	int hp = strlen(header), hdrlen = hp;
 	header[0] = header[1] = 0;
 	for (int i = 0; i < TOTAL_PIN_NUM; i++)
 		header[hp++] = pins[i] + '0';
-	header[hp++] = ':';
-	header[hp++] = '\r';
-	header[hp++] = '\n';
+	hp += sprintf(header + hp, ":%x:\r\n", trigger_freq);
 
 	sighandler_t old_hdl = signal(SIGALRM, &sigalrm_hdl);
 	alarm(3);
@@ -161,6 +159,8 @@ void readdata(const char *tts)
 	old_hdl = signal(SIGINT, &sigint_hdl);
 
 	uint8_t error_code;
+	int disp_count = 0;
+	int disp_mode = 0;
 	std::vector<uint8_t> data;
 	while (1)
 	{
@@ -179,11 +179,19 @@ void readdata(const char *tts)
 			tcsetattr(fd, TCSAFLUSH, &tcattr_old);
 			exit(1);
 		}
+		data.push_back(ch);
 		if (!verbose) {
-			printf(".");
+			putchar(disp_mode[".,*#="]);
+			if (++disp_count >= 64) {
+				if (data.size() > 1e6)
+					printf(" %.2f MB   \r", data.size() / double(1024*1024));
+				else
+					printf(" %.2f kB\r", data.size() / double(1024));
+				disp_mode = (disp_mode + 1) % 5;
+				disp_count = 0;
+			}
 			fflush(stdout);
 		}
-		data.push_back(ch);
 	}
 
 	printf("\nRecording finished. Got %d bytes tts payload.\n", (int)data.size());

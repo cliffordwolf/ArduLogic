@@ -25,6 +25,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
+#include <assert.h>
+#include <math.h>
 
 static void gen_pack(FILE *f)
 {
@@ -128,6 +130,32 @@ static void gen_serio(FILE *f)
 #endif
 }
 
+static void gen_freq_trigger(FILE *f)
+{
+	fprintf(f, "ISR(TIMER1_COMPA_vect) {\n");
+	fprintf(f, "	uint8_t value_pinc = PINC;\n");
+	fprintf(f, "	uint8_t value_pind = PIND;\n");
+	fprintf(f, "	PORTB |= 0x02;\n");
+	fprintf(f, "	fifo_push(pack(value_pinc, value_pind));\n");
+	fprintf(f, "	PORTB &= ~0x02;\n");
+	fprintf(f, "}\n");
+}
+
+static void gen_irq_trigger(FILE *f)
+{
+	fprintf(f, "// volatile uint8_t value_pinc;\n");
+	fprintf(f, "// volatile uint8_t value_pind;\n");
+	for (int i=0; i<2; i++) {
+		fprintf(f, "ISR(INT%d_vect) {\n", i);
+		fprintf(f, "	uint8_t value_pinc = PINC;\n");
+		fprintf(f, "	uint8_t value_pind = PIND;\n");
+		fprintf(f, "	PORTB |= 0x02;\n");
+		fprintf(f, "	fifo_push(pack(value_pinc, value_pind));\n");
+		fprintf(f, "	PORTB &= ~0x02;\n");
+		fprintf(f, "}\n");
+	}
+}
+
 static void gen_trigger(FILE *f)
 {
 	fprintf(f, "static uint8_t trigger_state = 0x80;\n");
@@ -171,21 +199,6 @@ static void gen_trigger(FILE *f)
 	fprintf(f, "}\n");
 }
 
-static void gen_irq_trigger(FILE *f)
-{
-	fprintf(f, "// volatile uint8_t value_pinc;\n");
-	fprintf(f, "// volatile uint8_t value_pind;\n");
-	for (int i=0; i<2; i++) {
-		fprintf(f, "ISR(INT%d_vect) {\n", i);
-		fprintf(f, "	uint8_t value_pinc = PINC;\n");
-		fprintf(f, "	uint8_t value_pind = PIND;\n");
-		fprintf(f, "	PORTB |= 0x02;\n");
-		fprintf(f, "	fifo_push(pack(value_pinc, value_pind));\n");
-		fprintf(f, "	PORTB &= ~0x02;\n");
-		fprintf(f, "}\n");
-	}
-}
-
 void genfirmware(const char *file)
 {
 	bool use_irq_trigger = true;
@@ -205,6 +218,11 @@ void genfirmware(const char *file)
 
 	if (num_trigger > 7) {
 		fprintf(stderr, "A maximum of 7 trigger pins is supported by the firmware generator.\n");
+		exit(1);
+	}
+
+	if (num_trigger > 0 && trigger_freq > 0) {
+		fprintf(stderr, "Conflicting trigger configuration: found trigger pins and trigger frequency.\n");
 		exit(1);
 	}
 
@@ -229,19 +247,19 @@ void genfirmware(const char *file)
 	gen_fifo(f, num_bits);
 	gen_serio(f);
 
-	if (use_irq_trigger)
+	if (trigger_freq > 0)
+		gen_freq_trigger(f);
+	else if (use_irq_trigger)
 		gen_irq_trigger(f);
 	else
 		gen_trigger(f);
 
-	char header[32 + TOTAL_PIN_NUM] = "..ARDULOGIC:";
+	char header[100 + TOTAL_PIN_NUM] = "..ARDULOGIC:";
 	int hp = strlen(header);
 	header[0] =  header[1] = 0;
 	for (int i = 0; i < TOTAL_PIN_NUM; i++)
 		header[hp++] = pins[i] + '0';
-	header[hp++] = ':';
-	header[hp++] = '\r';
-	header[hp++] = '\n';
+	hp += sprintf(header + hp, ":%x:\r\n", trigger_freq);
 
 	uint8_t pullupc = 0, pullupd = 0;
 	for (int i = 0; i < TOTAL_PIN_NUM; i++) {
@@ -265,7 +283,91 @@ void genfirmware(const char *file)
 		fprintf(f, "	fifo_data[fifo_in++] = 0x%02x;\n", header[i]);
 	fprintf(f, "	fifo_data[fifo_in] |= 0x80;\n");
 
-	if (use_irq_trigger)
+	if (trigger_freq > 0)
+	{
+		uint8_t tccr1a = 0, tccr1b = 0, tccr1c = 0;
+		uint16_t tcnt1 = 0, ocr1a = 0, ocr1b = 0, icr1 = 0;
+		uint8_t timsk1 = 0, tifr1 = 0;
+
+		int prescale = 1;
+		int prescale_bits = 1;
+		int cycles;
+
+		while (1)
+		{
+			cycles = round((16e6 / prescale) / trigger_freq);
+			if (cycles < 64000)
+				break;
+
+			switch (prescale)
+			{
+			case 1:
+				prescale = 8;
+				prescale_bits = 2;
+				break;
+			case 8:
+				prescale = 64;
+				prescale_bits = 3;
+				break;
+			case 64:
+				prescale = 256;
+				prescale_bits = 4;
+				break;
+			case 256:
+				prescale = 1024;
+				prescale_bits = 5;
+				break;
+			default:
+				assert(!"This should never happen");
+				exit(1);
+			}
+		}
+
+		printf("Configure trigger for %.2f kHz (prescale=%d, cycles=%d).\n",
+				16e6 / (prescale * cycles), prescale, cycles);
+
+		// CTC mode: set CTC1/WGM12 in tccr1b
+		tccr1b |= 0x08;
+
+		// configure prescaler and cycles
+		tccr1b |= prescale;
+		ocr1a = cycles;
+
+		// enable ionterrupt (timer 1 comp A)
+		timsk1 |= 0x02;
+
+		fprintf(f, "	fifo_push_en = true;\n");
+		fprintf(f, "	fifo_push(pack(PINC, PIND));\n");
+		fprintf(f, "	PORTB |= 0x10;\n");
+
+		fprintf(f, "	TCCR1A = 0x%02x;\n", tccr1a);
+		fprintf(f, "	TCCR1B = 0x%02x;\n", tccr1b);
+		fprintf(f, "	TCCR1C = 0x%02x;\n", tccr1c);
+		fprintf(f, "	TCNT1H = 0x%02x;\n", tcnt1 >> 8);
+		fprintf(f, "	TCNT1L = 0x%02x;\n", tcnt1 & 0xff);
+		fprintf(f, "	OCR1AH = 0x%02x;\n", ocr1a >> 8);
+		fprintf(f, "	OCR1AL = 0x%02x;\n", ocr1a & 0xff);
+		fprintf(f, "	OCR1BH = 0x%02x;\n", ocr1b >> 8);
+		fprintf(f, "	OCR1BL = 0x%02x;\n", ocr1b & 0xff);
+		fprintf(f, "	ICR1H = 0x%02x;\n", icr1 >> 8);
+		fprintf(f, "	ICR1L = 0x%02x;\n", icr1 & 0xff);
+		fprintf(f, "	TIMSK1 = 0x%02x;\n", timsk1);
+		fprintf(f, "	TIFR1 = 0x%02x;\n", tifr1);
+		fprintf(f, "	sei();\n");
+
+		fprintf(f, "	while ((UCSR0A & _BV(RXC0)) == 0) {\n");
+		fprintf(f, "		PINB = 0x01;\n");
+		fprintf(f, "		serio_send();\n");
+		fprintf(f, "	}\n");
+
+		fprintf(f, "	PORTB &= ~0x10;\n");
+		fprintf(f, "	fifo_push_en = false;\n");
+
+		fprintf(f, "	// EICRA = 0;\n");
+		fprintf(f, "	// EIMSK = 0;\n");
+		fprintf(f, "	// cli();\n");
+	}
+	else if (use_irq_trigger)
 	{
 		uint8_t eicra = 0;
 		uint8_t eimsk = 0;

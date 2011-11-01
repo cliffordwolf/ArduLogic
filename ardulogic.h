@@ -37,9 +37,10 @@
 
 #define DECODE_NONE	0
 #define DECODE_TRIGGER	1
-#define DECODE_SPI	2
-#define DECODE_I2C	3
-#define DECODE_JTAG	4
+#define DECODE_FREQ	2
+#define DECODE_SPI	3
+#define DECODE_I2C	4
+#define DECODE_JTAG	5
 
 #define CFG_SPI_CSNEG	0
 #define CFG_SPI_CS	1
@@ -57,6 +58,7 @@
 
 extern int decode;
 extern int decode_config[CFG_WORDS];
+extern int trigger_freq;
 extern int pins[TOTAL_PIN_NUM];
 extern const char *pin_names[TOTAL_PIN_NUM];
 extern std::vector<uint16_t> samples;

@@ -53,6 +53,7 @@ void yyerror (char const *s) {
 }
 
 %token <num> TOK_PIN
+%token <num> TOK_FREQ
 %token <str> TOK_STRING
 
 %token TOK_TRIGGER TOK_POSEDGE TOK_NEGEDGE
@@ -76,6 +77,11 @@ stmt_trigger:
 		check_decode(DECODE_TRIGGER);
 		pins[$3] |= $2;
 		decode = DECODE_TRIGGER;
+	} |
+	TOK_TRIGGER TOK_FREQ {
+		check_decode(0);
+		trigger_freq = $2;
+		decode = DECODE_FREQ;
 	};
 
 stmt_capture:

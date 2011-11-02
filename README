@@ -53,8 +53,14 @@ in a .vcd file.
 
 Example session:
 
+	$ vi example.al
+	<create or modify configuration>
+
 	$ ./ardulogic -p -t /dev/ttyACM0 example.al example.vcd
-	<..TBD..>
+	<press Ctrl-C to stop recording>
+
+	$ gtkwave example.vcd
+	<inspect signals in gtkwave gui>
 
 
 Configuration file syntax:
@@ -111,10 +117,14 @@ in front of CS specifies if the CS pin is inverted. Usually this is the case.
 Note that you can't mix multiple `decode' statements and you can't mix
 `decode' statements with `trigger' statements in the same configuration file.
 
+WARNING: The SPI decoder is not implemented yet!
+
 decode i2c <PIN-SCL> <PIN-SDA>
 ------------------------------
 
 This configures capturing and decoding an I2C bus.
+
+WARNING: The I2C decoder is not implemented yet!
 
 decode jtag <PIN-TCK> <PIN-TMS> <PIN-TDI> <PIN-TDO>
 ---------------------------------------------------

@@ -55,7 +55,7 @@
 #define CFG_JTAG_TDI	1
 #define CFG_JTAG_TDO	2
 
-#define CFG_WORDS	4
+#define CFG_WORDS	5
 
 extern int decode;
 extern int decode_config[CFG_WORDS];

@@ -30,7 +30,7 @@ static bool last_cs;
 static uint8_t bitcount;
 static uint8_t wordcount;
 
-static void decoder_jtag_vcd_defs(FILE *f)
+static void decoder_spi_vcd_defs(FILE *f)
 {
 	fprintf(f, "$var reg 8 %s1 %sMOSI_DATA $end\n", vcd_prefix, vcd_prefix);
 	fprintf(f, "$var reg 8 %s2 %sMISO_DATA $end\n", vcd_prefix, vcd_prefix);
@@ -38,7 +38,7 @@ static void decoder_jtag_vcd_defs(FILE *f)
 	fprintf(f, "$var reg 8 %sw %sWORDCOUNT $end\n", vcd_prefix, vcd_prefix);
 }
 
-static void decoder_jtag_vcd_init(FILE *f)
+static void decoder_spi_vcd_init(FILE *f)
 {
 	fprintf(f, " bzzzzzzzz 1");
 	fprintf(f, " bzzzzzzzz 2");
@@ -49,15 +49,15 @@ static void decoder_jtag_vcd_init(FILE *f)
 
 static void printbyte(FILE *f, uint8_t data, const char *name)
 {
-	printf(" b")
+	printf(" b");
 	for (int i = 0; i < 8; i++)
 		printf("%d", (data & (0x80 >> i)) != 0);
-	printf(" %s", name)
+	printf(" %s", name);
 }
 
-static void decoder_jtag_vcd_step(FILE *f, size_t i)
+static void decoder_spi_vcd_step(FILE *f, size_t i)
 {
-	bool cs = (samples[i-1] & (1 << decode_config[CFG_SPI_CS])) != 0;
+	bool cs = (samples[i] & (1 << decode_config[CFG_SPI_CS])) != 0;
 	if (decode_config[CFG_SPI_CSNEG] != 0)
 		cs = !cs;
 	if (cs == true && last_cs == false) {
@@ -80,20 +80,20 @@ static void decoder_jtag_vcd_step(FILE *f, size_t i)
 		if (bitcount == 0) {
 			uint8_t mosi_byte = 0, miso_byte = 0;
 			for (int j = 0; j < 8; j++) {
-				bool mosi = (samples[i-1+j] & (1 << decode_config[CFG_SPI_MOSI])) != 0;
-				bool miso = (samples[i-1+j] & (1 << decode_config[CFG_SPI_MISO])) != 0;
+				bool mosi = (samples[i+j] & (1 << decode_config[CFG_SPI_MOSI])) != 0;
+				bool miso = (samples[i+j] & (1 << decode_config[CFG_SPI_MISO])) != 0;
 				int bitidx = decode_config[CFG_SPI_MSB] ? 8-j : j;
 				mosi_byte |= mosi << bitidx;
 				miso_byte |= miso << bitidx;
 			}
 			printbyte(f, mosi_byte, "1");
 			printbyte(f, miso_byte, "2");
-			printbyte(f, bytecount, "w");
+			printbyte(f, wordcount, "w");
 		}
 		printbyte(f, bitcount, "c");
 		if (++bitcount == 8) {
 			bitcount = 0;
-			bytecount++;
+			wordcount++;
 		}
 	}
 }

@@ -42,7 +42,9 @@ bool verbose;
 
 void help(const char *progname)
 {
-	fprintf(stderr, "Usage: %s [-v] [-p [-n]] [ -P vcd_prefix ] [-t <dev>] <configfile> <vcdfile>\n", progname);
+	fprintf(stderr, "Usage: %s [-v] [-p [-n]] [-P vcd_prefix] [-t <dev>] \\\n", progname);
+	fprintf(stderr, "     %*.s [-V vcd_ file] [-R raw_file] \\\n", int(strlen(progname)+2), "");
+	fprintf(stderr, "     %*.s configfile [ raw_file ]\n", int(strlen(progname)+2), "");
 	exit(1);
 }
 
@@ -51,8 +53,10 @@ int main(int argc, char **argv)
 	int opt;
 	const char *ttydev = "/dev/ttyACM0";
 	bool programm_arduino = false;
+	const char *vcd_file = NULL;
+	const char *raw_file = NULL;
 
-	while ((opt = getopt(argc, argv, "vpnP:t:")) != -1) {
+	while ((opt = getopt(argc, argv, "vpnP:t:V:R:")) != -1) {
 		switch (opt) {
 		case 'v':
 			verbose = true;
@@ -69,23 +73,35 @@ int main(int argc, char **argv)
 		case 't':
 			ttydev = optarg;
 			break;
+		case 'V':
+			vcd_file = optarg;
+			break;
+		case 'R':
+			raw_file = optarg;
+			break;
 		default:
 			help(argv[0]);
 		}
 	}
 
-	if (optind != argc-2)
+	if (optind >= argc-2)
 		help(argv[0]);
 
 	config(argv[optind]);
 
-	if (programm_arduino) {
+	if (programm_arduino)
 		genfirmware(ttydev);
-		readdata(ttydev, false);
-	} else {
-		readdata(ttydev, true);
-	}
-	writevcd(argv[optind+1]);
+
+	if (optind == argc-2)
+		readrawfile(argv[optind+1]);
+	else
+		readdata(ttydev, !programm_arduino);
+
+	if (vcd_file)
+		writevcd(vcd_file);
+
+	if (raw_file)
+		writerawfile(argv[optind+1]);
 
 	return 0;
 }

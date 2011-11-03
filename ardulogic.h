@@ -68,6 +68,8 @@ void config(const char *file);
 void genfirmware(const char *tts);
 void readdata(const char *tts, bool autoprog);
 void writevcd(const char *file);
+void writerawfile(const char *file);
+void readrawfile(const char *file);
 
 extern const char *vcd_prefix;
 extern bool dont_cleanup_fwsrc;

@@ -108,7 +108,7 @@ static size_t get_numwords(std::vector<uint8_t> &data, size_t bits)
 {
 	size_t total_bits = get_numbits(data);
 	if (total_bits % bits != 0) {
-		fprintf(stderr, "Data encoding boundary error on tts `%s' (total_bits=%d, chunk_bits=%d).\n",
+		fprintf(stderr, "Data encoding boundary error on tts `%s' (total_bits=%zd, chunk_bits=%zd).\n",
 				tts_name, total_bits, bits);
 		exit(1);
 	}

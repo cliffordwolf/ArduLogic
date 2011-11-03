@@ -16,6 +16,7 @@ lexer.cc: lexer.l
 clean:
 	rm -f ardulogic *.d *.o core
 	rm -f parser.cc parser.hh lexer.cc
+	rm -f .ardulogic_tmp.firmware.*
 
 -include *.d
 

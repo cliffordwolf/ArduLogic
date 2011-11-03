@@ -116,13 +116,13 @@ stmt_decode:
 		decode_config[CFG_SPI_MOSI]  = $8;
 		decode_config[CFG_SPI_MISO]  = $9;
 		pins[$5] |= $3; // SCK
-		pins[$6] |= PIN_CAPTURE | PIN_TRIGGER_POSEDGE | PIN_TRIGGER_NEGEDGE; // CS
-		pins[$7] |= PIN_CAPTURE; // MOSI
-		pins[$8] |= PIN_CAPTURE; // MISO
+		pins[$7] |= PIN_CAPTURE | PIN_TRIGGER_POSEDGE | PIN_TRIGGER_NEGEDGE; // CS
+		pins[$8] |= PIN_CAPTURE; // MOSI
+		pins[$9] |= PIN_CAPTURE; // MISO
 		pin_names[$5] = "SCK";
-		pin_names[$6] = "CS";
-		pin_names[$7] = "MOSI";
-		pin_names[$8] = "MISO";
+		pin_names[$7] = "CS";
+		pin_names[$8] = "MOSI";
+		pin_names[$9] = "MISO";
 		decode = DECODE_SPI;
 	} |
 	TOK_DECODE TOK_I2C TOK_PIN TOK_PIN {

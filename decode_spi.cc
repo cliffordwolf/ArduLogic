@@ -34,7 +34,7 @@ static void decoder_spi_vcd_defs(FILE *f)
 {
 	fprintf(f, "$var reg 8 %s1 %sMOSI_DATA $end\n", vcd_prefix, vcd_prefix);
 	fprintf(f, "$var reg 8 %s2 %sMISO_DATA $end\n", vcd_prefix, vcd_prefix);
-	fprintf(f, "$var reg 8 %sc %sBITCOUNT $end\n", vcd_prefix, vcd_prefix);
+	fprintf(f, "$var reg 8 %sb %sBITCOUNT $end\n", vcd_prefix, vcd_prefix);
 	fprintf(f, "$var reg 8 %sw %sWORDCOUNT $end\n", vcd_prefix, vcd_prefix);
 }
 
@@ -42,17 +42,17 @@ static void decoder_spi_vcd_init(FILE *f)
 {
 	fprintf(f, " bzzzzzzzz 1");
 	fprintf(f, " bzzzzzzzz 2");
-	fprintf(f, " bzzzzzzzz c");
+	fprintf(f, " bzzzzzzzz b");
 	fprintf(f, " bzzzzzzzz w");
 	last_cs = false;
 }
 
 static void printbyte(FILE *f, uint8_t data, const char *name)
 {
-	printf(" b");
+	fprintf(f, " b");
 	for (int i = 0; i < 8; i++)
-		printf("%d", (data & (0x80 >> i)) != 0);
-	printf(" %s", name);
+		fprintf(f, "%d", (data & (0x80 >> i)) != 0);
+	fprintf(f, " %s", name);
 }
 
 static void decoder_spi_vcd_step(FILE *f, size_t i)
@@ -61,19 +61,22 @@ static void decoder_spi_vcd_step(FILE *f, size_t i)
 	if (decode_config[CFG_SPI_CSNEG] != 0)
 		cs = !cs;
 	if (cs == true && last_cs == false) {
+#if 0
 		fprintf(f, " bxxxxxxxx 1");
 		fprintf(f, " bxxxxxxxx 2");
-		fprintf(f, " bxxxxxxxx c");
+		fprintf(f, " bxxxxxxxx b");
 		fprintf(f, " bxxxxxxxx w");
+#endif
 		last_cs = true;
+		wordcount = 0;
 		bitcount = 0;
 	}
 	else if (cs == false && last_cs == true) {
 		fprintf(f, " bzzzzzzzz 1");
 		fprintf(f, " bzzzzzzzz 2");
-		fprintf(f, " bzzzzzzzz c");
+		fprintf(f, " bzzzzzzzz b");
 		fprintf(f, " bzzzzzzzz w");
-		last_cs = true;
+		last_cs = false;
 		bitcount = 0;
 	}
 	else {
@@ -90,7 +93,7 @@ static void decoder_spi_vcd_step(FILE *f, size_t i)
 			printbyte(f, miso_byte, "2");
 			printbyte(f, wordcount, "w");
 		}
-		printbyte(f, bitcount, "c");
+		printbyte(f, bitcount, "b");
 		if (++bitcount == 8) {
 			bitcount = 0;
 			wordcount++;

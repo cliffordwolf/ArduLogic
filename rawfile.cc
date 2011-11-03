@@ -31,7 +31,7 @@ void writerawfile(const char *file)
 	FILE *f = fopen(file, "w");
 
 	if (f == NULL) {
-		fprintf(stderr, "Can't open VCD file `%s' for writing: %s\n", file, strerror(errno));
+		fprintf(stderr, "Can't open RAW file `%s' for writing: %s\n", file, strerror(errno));
 		exit(1);
 	}
 
@@ -47,7 +47,7 @@ void readrawfile(const char *file)
 	FILE *f = fopen(file, "r");
 
 	if (f == NULL) {
-		fprintf(stderr, "Can't open VCD file `%s' for reading: %s\n", file, strerror(errno));
+		fprintf(stderr, "Can't open RAW file `%s' for reading: %s\n", file, strerror(errno));
 		exit(1);
 	}
 

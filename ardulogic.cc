@@ -84,7 +84,7 @@ int main(int argc, char **argv)
 		}
 	}
 
-	if (optind >= argc-2)
+	if (optind != argc-2 && optind != argc-1)
 		help(argv[0]);
 
 	config(argv[optind]);
@@ -101,7 +101,7 @@ int main(int argc, char **argv)
 		writevcd(vcd_file);
 
 	if (raw_file)
-		writerawfile(argv[optind+1]);
+		writerawfile(raw_file);
 
 	return 0;
 }

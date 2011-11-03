@@ -68,6 +68,9 @@ D[2-7] {
 "i2c"		{ return TOK_I2C; }
 "jtag"		{ return TOK_JTAG; }
 
+"msb"		{ return TOK_MSB; }
+"lsb"		{ return TOK_LSB; }
+
 [\n\r]		{ return TOK_EOL; }
 "#"[^\n\r]*	/* comment */
 [\t ]		/* ignore whitespace*/

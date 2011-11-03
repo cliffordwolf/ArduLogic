@@ -107,12 +107,13 @@ Rename a PIN to the given name. This only changes the PIN label
 in the generated VCD file. All commands in the config file must still
 use the regaluar "An" or "Dn" pin names to refer to the pins in question.
 
-decode spi <EDGE> <PIN-SCK> [!] <PIN-CS> <PIN-MOSI> <PIN-MISO>
---------------------------------------------------------------
+decode spi <EDGE> <ORDER> <PIN-SCK> [!] <PIN-CS> <PIN-MOSI> <PIN-MISO>
+----------------------------------------------------------------------
 
 This configures capturing and decoding an SPI bus. The <EDGE> specifies if data
-on the bus should be captured on the positive or negative edge of SCK. The `!'
-in front of CS specifies if the CS pin is inverted. Usually this is the case.
+on the bus should be captured on the positive or negative edge of SCK. The
+<ORDER> parameter must be `msb' for MSB first byte ordering or `lsb' for LSB
+first byte order. The `!' in front of CS specifies if the CS pin is inverted.
 
 Note that you can't mix multiple `decode' statements and you can't mix
 `decode' statements with `trigger' statements in the same configuration file.

@@ -42,10 +42,11 @@
 #define DECODE_I2C	4
 #define DECODE_JTAG	5
 
-#define CFG_SPI_CSNEG	0
-#define CFG_SPI_CS	1
-#define CFG_SPI_MOSI	2
-#define CFG_SPI_MISO	3
+#define CFG_SPI_MSB	0
+#define CFG_SPI_CSNEG	1
+#define CFG_SPI_CS	2
+#define CFG_SPI_MOSI	3
+#define CFG_SPI_MISO	4
 
 #define CFG_I2C_SCL	0
 #define CFG_I2C_SDA	1

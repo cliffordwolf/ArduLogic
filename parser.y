@@ -59,8 +59,9 @@ void yyerror (char const *s) {
 %token TOK_TRIGGER TOK_POSEDGE TOK_NEGEDGE
 %token TOK_DECODE TOK_SPI TOK_I2C TOK_JTAG
 %token TOK_CAPTURE TOK_PULLUP TOK_LABEL TOK_EOL
+%token TOK_MSB TOK_LSB
 
-%type <num> edge neg
+%type <num> edge neg msb_notlsb
 
 %%
 
@@ -107,20 +108,21 @@ pullup_list:
 	};
 
 stmt_decode:
-	TOK_DECODE TOK_SPI edge TOK_PIN neg TOK_PIN TOK_PIN TOK_PIN {
+	TOK_DECODE TOK_SPI edge msb_notlsb TOK_PIN neg TOK_PIN TOK_PIN TOK_PIN {
 		check_decode(0);
-		decode_config[CFG_SPI_CSNEG] = $5;
-		decode_config[CFG_SPI_CS]    = $6;
-		decode_config[CFG_SPI_MOSI]  = $7;
-		decode_config[CFG_SPI_MISO]  = $8;
-		pins[$4] |= $3; // SCK
-		pins[$5] |= PIN_CAPTURE | PIN_TRIGGER_POSEDGE | PIN_TRIGGER_NEGEDGE; // CS
-		pins[$6] |= PIN_CAPTURE; // MOSI
-		pins[$7] |= PIN_CAPTURE; // MISO
-		pin_names[$4] = "SCK";
-		pin_names[$5] = "CS";
-		pin_names[$6] = "MOSI";
-		pin_names[$7] = "MISO";
+		decode_config[CFG_SPI_MSB]   = $4;
+		decode_config[CFG_SPI_CSNEG] = $6;
+		decode_config[CFG_SPI_CS]    = $7;
+		decode_config[CFG_SPI_MOSI]  = $8;
+		decode_config[CFG_SPI_MISO]  = $9;
+		pins[$5] |= $3; // SCK
+		pins[$6] |= PIN_CAPTURE | PIN_TRIGGER_POSEDGE | PIN_TRIGGER_NEGEDGE; // CS
+		pins[$7] |= PIN_CAPTURE; // MOSI
+		pins[$8] |= PIN_CAPTURE; // MISO
+		pin_names[$5] = "SCK";
+		pin_names[$6] = "CS";
+		pin_names[$7] = "MOSI";
+		pin_names[$8] = "MISO";
 		decode = DECODE_SPI;
 	} |
 	TOK_DECODE TOK_I2C TOK_PIN TOK_PIN {
@@ -167,6 +169,14 @@ neg:
 		$$ = 1;
 	} |
 	/* empty */ {
+		$$ = 0;
+	};
+
+msb_notlsb:
+	TOK_MSB {
+		$$ = 1;
+	} |
+	TOK_LSB {
 		$$ = 0;
 	};
 

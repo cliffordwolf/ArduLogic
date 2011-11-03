@@ -56,7 +56,7 @@ Example session:
 	$ vi example.al
 	<create or modify configuration>
 
-	$ ./ardulogic -p -t /dev/ttyACM0 example.al example.vcd
+	$ ./ardulogic -p -t /dev/ttyACM0 -V example.vcd example.al
 	<press Ctrl-C to stop recording>
 
 	$ gtkwave example.vcd

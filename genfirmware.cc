@@ -101,7 +101,6 @@ static void gen_fifo(FILE *f, int num_bits)
 
 static void gen_serio(FILE *f)
 {
-	fprintf(f, "#define BAUD_RATE 115200\n");
 	fprintf(f, "static void serio_setup() {\n");
 	fprintf(f, "	// Configure USART0 for 2MBaud\n");
 	fprintf(f, "	UBRR0H = 0;\n");

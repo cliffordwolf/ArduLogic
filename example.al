@@ -27,7 +27,7 @@
 ### MOSI = D4
 ### MISO = D5
 ###
-# decode spi posedge D2 !D3 D4 D5
+# decode spi posedge lsb D2 !D3 D4 D5
 
 ###
 ### Decode I2C Data

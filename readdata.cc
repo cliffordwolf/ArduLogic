@@ -65,26 +65,49 @@ static void sigalrm_hdl(int dummy)
 	printf("\n");
 }
 
+static uint8_t serbuffer[1024];
+static int serbuffer_idx, serbuffer_len;
+static bool serbuffer_end_of_block;
+
+static int serialreadbyte()
+{
+	if (serbuffer_idx < serbuffer_len) {
+		serbuffer_end_of_block = serbuffer_idx+1 == serbuffer_len;
+		return serbuffer[serbuffer_idx++];
+	}
+
+	int rc = read(fd, serbuffer, 1024);
+	if (rc > 0) {
+		serbuffer_idx = 0;
+		serbuffer_len = rc;
+		return serialreadbyte();
+	}
+
+	if (rc == 0)
+		return -1;
+	return -2;
+}
+
 static unsigned char serialread()
 {
-	unsigned char ch;
-	int rc = read(fd, &ch, 1);
-	if (rc == 1) {
+	int ch = serialreadbyte();
+	if (ch >= 0) {
 		if (verbose) {
 			if (32 < ch && ch < 127)
-				printf("<0x%02x:'%c'>\n", ch, ch);
+				printf("<0x%02x:'%c'>", ch, ch);
 			else if (ch > 127)
-				printf("<0x%02x:0b%d%d%d%d%d%d%d%d>\n", ch,
+				printf("<0x%02x:0b%d%d%d%d%d%d%d%d>", ch,
 						(ch & 0x80) != 0, (ch & 0x40) != 0,
 						(ch & 0x20) != 0, (ch & 0x10) != 0,
 						(ch & 0x08) != 0, (ch & 0x04) != 0,
 						(ch & 0x02) != 0, (ch & 0x01) != 0);
 			else
-				printf("<0x%02x>\n", ch);
+				printf("<0x%02x>", ch);
+			printf(serbuffer_end_of_block ? " EOB\n" : "\n");
 		}
 		return ch;
 	}
-	if (rc == 0)
+	if (ch == -1)
 		fprintf(stderr, "I/O Error on tts `%s': EOF\n", tts_name);
 	else
 		fprintf(stderr, "I/O Error on tts `%s': %s\n", tts_name, strerror(errno));
@@ -125,6 +148,10 @@ static uint16_t get_word(std::vector<uint8_t> &data, size_t num, size_t bits)
 
 void readdata(const char *tts, bool autoprog)
 {
+	serbuffer_idx = 0;
+	serbuffer_len = 0;
+	serbuffer_end_of_block = false;
+
 	printf("Connecting to Arduino on `%s'..\n", tts);
 	tts_name = tts;
 
@@ -150,6 +177,7 @@ void readdata(const char *tts, bool autoprog)
 		header[hp++] = pins[i] + '0';
 	hp += sprintf(header + hp, ":%x:\r\n", trigger_freq);
 
+restart_com:
 	sighandler_t old_hdl = signal(SIGALRM, &sigalrm_hdl);
 	alarm(3);
 
@@ -190,6 +218,10 @@ void readdata(const char *tts, bool autoprog)
 		unsigned char ch = serialread();
 		if (ch == 0) {
 			ch = serialread();
+			if (ch == 0) {
+				printf("\nGot restart token start again.\n");
+				goto restart_com;
+			}
 			if (ch == 1) {
 				error_code = serialread();
 				break;
@@ -203,7 +235,7 @@ void readdata(const char *tts, bool autoprog)
 			exit(1);
 		}
 		data.push_back(ch);
-		if (!verbose) {
+		if (!verbose && serbuffer_end_of_block) {
 			putchar(disp_mode[".,*#="]);
 			if (++disp_count >= 64) {
 				if (data.size() > 1e6)

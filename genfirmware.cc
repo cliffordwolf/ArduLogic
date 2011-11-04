@@ -279,6 +279,8 @@ void genfirmware(const char *tts)
 	fprintf(f, "	PORTC = 0x%02x;\n", pullupc);
 	fprintf(f, "	PORTD = 0x%02x;\n", pullupd);
 	fprintf(f, "	serio_setup();\n");
+	for (int i = 0; i < 8; i++)
+		fprintf(f, "	fifo_data[fifo_in++] = 0;\n");
 	for (int i = 0; i < hp; i++)
 		fprintf(f, "	fifo_data[fifo_in++] = 0x%02x;\n", header[i]);
 	fprintf(f, "	fifo_data[fifo_in] |= 0x80;\n");
@@ -330,7 +332,7 @@ void genfirmware(const char *tts)
 		tccr1b |= 0x08;
 
 		// configure prescaler and cycles
-		tccr1b |= prescale;
+		tccr1b |= prescale_bits;
 		ocr1a = cycles;
 
 		// enable ionterrupt (timer 1 comp A)

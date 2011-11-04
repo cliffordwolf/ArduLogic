@@ -27,6 +27,7 @@
 #include <errno.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/time.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -209,6 +210,9 @@ restart_com:
 	printf("Recording. Press Ctrl-C to stop.\n");
 	old_hdl = signal(SIGINT, &sigint_hdl);
 
+	struct timeval tv_start, tv_stop;
+	gettimeofday(&tv_start, NULL);
+
 	uint8_t error_code;
 	int disp_count = 0;
 	int disp_mode = 0;
@@ -249,7 +253,10 @@ restart_com:
 		}
 	}
 
-	printf("\nRecording finished. Got %d bytes tts payload.\n", (int)data.size());
+	gettimeofday(&tv_stop, NULL);
+	double tv_diff = (tv_stop.tv_sec - tv_start.tv_sec) + 1e-6*(tv_stop.tv_usec - tv_start.tv_usec);
+
+	printf("\nRecording finished. Got %d bytes tts payload in %.2f seconds.\n", (int)data.size(), tv_diff);
 	signal(SIGINT, old_hdl);
 
 	tcsetattr(fd, TCSAFLUSH, &tcattr_old);
@@ -282,6 +289,6 @@ restart_com:
 		samples.push_back(sample);
 	}
 
-	printf("Decoded %d samples from captured data.\n", (int)samples.size());
+	printf("Decoded %d samples from captured data. Avg. sampling rate: %.2f kS/s.\n", (int)samples.size(), 1e-3 * samples.size() / tv_diff);
 }
 

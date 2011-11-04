@@ -113,8 +113,6 @@ stmt_decode:
 		decode_config[CFG_SPI_MSB]   = $4;
 		decode_config[CFG_SPI_CSNEG] = $6;
 		decode_config[CFG_SPI_CS]    = $7;
-		decode_config[CFG_SPI_MOSI]  = $8;
-		decode_config[CFG_SPI_MISO]  = $9;
 		pins[$5] |= $3; // SCK
 		pins[$7] |= PIN_CAPTURE | PIN_TRIGGER_POSEDGE | PIN_TRIGGER_NEGEDGE; // CS
 		pins[$8] |= PIN_CAPTURE; // MOSI

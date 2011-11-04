@@ -32,18 +32,30 @@ static uint8_t wordcount;
 
 static void decoder_spi_vcd_defs(FILE *f)
 {
-	fprintf(f, "$var reg 8 %s1 %sMOSI_DATA $end\n", vcd_prefix, vcd_prefix);
-	fprintf(f, "$var reg 8 %s2 %sMISO_DATA $end\n", vcd_prefix, vcd_prefix);
+	for (int i = 0; i < TOTAL_PIN_NUM; i++)
+	{
+		if (i == decode_config[CFG_SPI_CS])
+			continue;
+		if ((pins[i] & PIN_CAPTURE) == 0)
+			continue;
+		fprintf(f, "$var reg 8 %sd%d %s%s_DATA $end\n",
+				vcd_prefix, i, vcd_prefix, pin_names[i]);
+	}
 	fprintf(f, "$var reg 8 %sb %sBITCOUNT $end\n", vcd_prefix, vcd_prefix);
 	fprintf(f, "$var reg 8 %sw %sWORDCOUNT $end\n", vcd_prefix, vcd_prefix);
 }
 
 static void decoder_spi_vcd_init(FILE *f)
 {
-	fprintf(f, " bzzzzzzzz 1");
-	fprintf(f, " bzzzzzzzz 2");
-	fprintf(f, " bzzzzzzzz b");
-	fprintf(f, " bzzzzzzzz w");
+	for (int i = 0; i < TOTAL_PIN_NUM; i++) {
+		if (i == decode_config[CFG_SPI_CS])
+			continue;
+		if ((pins[i] & PIN_CAPTURE) == 0)
+			continue;
+		fprintf(f, " bzzzzzzzz %sd%d", vcd_prefix, i);
+	}
+	fprintf(f, " bzzzzzzzz %sb", vcd_prefix);
+	fprintf(f, " bzzzzzzzz %sw", vcd_prefix);
 	last_cs = false;
 }
 
@@ -52,7 +64,7 @@ static void printbyte(FILE *f, uint8_t data, const char *name)
 	fprintf(f, " b");
 	for (int i = 0; i < 8; i++)
 		fprintf(f, "%d", (data & (0x80 >> i)) != 0);
-	fprintf(f, " %s", name);
+	fprintf(f, " %s%s", vcd_prefix, name);
 }
 
 static void decoder_spi_vcd_step(FILE *f, size_t i)
@@ -62,35 +74,50 @@ static void decoder_spi_vcd_step(FILE *f, size_t i)
 		cs = !cs;
 	if (cs == true && last_cs == false) {
 #if 0
-		fprintf(f, " bxxxxxxxx 1");
-		fprintf(f, " bxxxxxxxx 2");
-		fprintf(f, " bxxxxxxxx b");
-		fprintf(f, " bxxxxxxxx w");
+		for (int j = 0; j < TOTAL_PIN_NUM; j++) {
+			if (j == decode_config[CFG_SPI_CS])
+				continue;
+			if ((pins[j] & PIN_CAPTURE) == 0)
+				continue;
+			fprintf(f, " bxxxxxxxx %sd%d", vcd_prefix, j);
+		}
+		fprintf(f, " bxxxxxxxx %sb", vcd_prefix);
+		fprintf(f, " bxxxxxxxx %sw", vcd_prefix);
 #endif
 		last_cs = true;
 		wordcount = 0;
 		bitcount = 0;
 	}
 	else if (cs == false && last_cs == true) {
-		fprintf(f, " bzzzzzzzz 1");
-		fprintf(f, " bzzzzzzzz 2");
-		fprintf(f, " bzzzzzzzz b");
-		fprintf(f, " bzzzzzzzz w");
+		for (int j = 0; j < TOTAL_PIN_NUM; j++) {
+			if (j == decode_config[CFG_SPI_CS])
+				continue;
+			if ((pins[j] & PIN_CAPTURE) == 0)
+				continue;
+			fprintf(f, " bzzzzzzzz %sd%d", vcd_prefix, j);
+		}
+		fprintf(f, " bzzzzzzzz %sb", vcd_prefix);
+		fprintf(f, " bzzzzzzzz %sw", vcd_prefix);
 		last_cs = false;
 		bitcount = 0;
 	}
 	else {
 		if (bitcount == 0) {
-			uint8_t mosi_byte = 0, miso_byte = 0;
-			for (int j = 0; j < 8; j++) {
-				bool mosi = (samples[i+j] & (1 << decode_config[CFG_SPI_MOSI])) != 0;
-				bool miso = (samples[i+j] & (1 << decode_config[CFG_SPI_MISO])) != 0;
-				int bitidx = decode_config[CFG_SPI_MSB] ? 8-j : j;
-				mosi_byte |= mosi << bitidx;
-				miso_byte |= miso << bitidx;
+			for (int j = 0; j < TOTAL_PIN_NUM; j++) {
+				if (j == decode_config[CFG_SPI_CS])
+					continue;
+				if ((pins[j] & PIN_CAPTURE) == 0)
+					continue;
+				uint8_t byte = 0;
+				for (int k = 0; k < 8; k++) {
+					bool bit = (samples[i+k] & (1 << j)) != 0;
+					int bitidx = decode_config[CFG_SPI_MSB] ? 8-k : k;
+					byte |= bit << bitidx;
+				}
+				char name[5];
+				snprintf(name, 5, "d%d", j);
+				printbyte(f, byte, name);
 			}
-			printbyte(f, mosi_byte, "1");
-			printbyte(f, miso_byte, "2");
 			printbyte(f, wordcount, "w");
 		}
 		printbyte(f, bitcount, "b");

@@ -45,8 +45,6 @@
 #define CFG_SPI_MSB	0
 #define CFG_SPI_CSNEG	1
 #define CFG_SPI_CS	2
-#define CFG_SPI_MOSI	3
-#define CFG_SPI_MISO	4
 
 #define CFG_I2C_SCL	0
 #define CFG_I2C_SDA	1
@@ -55,7 +53,7 @@
 #define CFG_JTAG_TDI	1
 #define CFG_JTAG_TDO	2
 
-#define CFG_WORDS	5
+#define CFG_WORDS	3
 
 extern int decode;
 extern int decode_config[CFG_WORDS];

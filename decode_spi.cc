@@ -111,7 +111,7 @@ static void decoder_spi_vcd_step(FILE *f, size_t i)
 				uint8_t byte = 0;
 				for (int k = 0; k < 8; k++) {
 					bool bit = (samples[i+k] & (1 << j)) != 0;
-					int bitidx = decode_config[CFG_SPI_MSB] ? 8-k : k;
+					int bitidx = decode_config[CFG_SPI_MSB] ? 7-k : k;
 					byte |= bit << bitidx;
 				}
 				char name[5];

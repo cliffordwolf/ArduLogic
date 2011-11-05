@@ -35,6 +35,8 @@ void writevcd(const char *file)
 		exit(1);
 	}
 
+	printf("Writing VCD output file `%s'.\n", file);
+
 	struct decoder_desc *decoder = NULL;
 	if (decode == DECODE_SPI)
 		decoder = &decoder_spi;

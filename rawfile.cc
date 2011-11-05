@@ -35,6 +35,8 @@ void writerawfile(const char *file)
 		exit(1);
 	}
 
+	printf("Writing RAW output file `%s'.\n", file);
+
 	for (size_t i = 0; i < samples.size(); i++) {
 		fprintf(f, "%04x\n", samples[i]);
 	}
@@ -50,6 +52,8 @@ void readrawfile(const char *file)
 		fprintf(stderr, "Can't open RAW file `%s' for reading: %s\n", file, strerror(errno));
 		exit(1);
 	}
+
+	printf("Reading RAW file `%s'.\n", file);
 
 	unsigned int sample;
 	while (fscanf(f, "%04x\n", &sample) == 1)

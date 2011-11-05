@@ -97,11 +97,11 @@ int main(int argc, char **argv)
 	else
 		readdata(ttydev, !programm_arduino);
 
-	if (vcd_file)
-		writevcd(vcd_file);
-
 	if (raw_file)
 		writerawfile(raw_file);
+
+	if (vcd_file)
+		writevcd(vcd_file);
 
 	return 0;
 }

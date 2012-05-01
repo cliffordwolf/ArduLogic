@@ -40,8 +40,8 @@ void writevcd(const char *file)
 	struct decoder_desc *decoder = NULL;
 	if (decode == DECODE_SPI)
 		decoder = &decoder_spi;
-//	if (decode == DECODE_I2C)
-//		decoder = &decoder_i2c;
+	if (decode == DECODE_I2C)
+		decoder = &decoder_i2c;
 	if (decode == DECODE_JTAG)
 		decoder = &decoder_jtag;
 

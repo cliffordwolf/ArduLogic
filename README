@@ -123,8 +123,6 @@ decode i2c <PIN-SCL> <PIN-SDA>
 
 This configures capturing and decoding an I2C bus.
 
-WARNING: The I2C decoder is not implemented yet!
-
 decode jtag <PIN-TCK> <PIN-TMS> <PIN-TDI> <PIN-TDO>
 ---------------------------------------------------
 

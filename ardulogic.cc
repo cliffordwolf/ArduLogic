@@ -43,7 +43,7 @@ bool verbose;
 void help(const char *progname)
 {
 	fprintf(stderr, "Usage: %s [-v] [-p [-n]] [-P vcd_prefix] [-t <dev>] \\\n", progname);
-	fprintf(stderr, "     %*.s [-V vcd_ file] [-R raw_file] \\\n", int(strlen(progname)+2), "");
+	fprintf(stderr, "     %*.s [-V vcd_file] [-R raw_file] \\\n", int(strlen(progname)+2), "");
 	fprintf(stderr, "     %*.s configfile [ raw_file ]\n", int(strlen(progname)+2), "");
 	exit(1);
 }

@@ -37,9 +37,9 @@ only used when all triggers are on the pins D2 and/or D3. So it is highly
 recommended to connect clock lines or other trigger lines to eighter pin
 D2 or pin D3.
 
-The data is transfered from the Arduino to the PC using a 115200 baud
-serial link and the data is transfered in bit-packed form. Thus higher
-sampling rates can be achieved when fewer pins are used.
+The data is transfered from the Arduino to the PC using a 2 megabaud serial
+link and the data is transfered in bit-packed form. Thus higher sampling rates
+can be achieved when fewer pins are used.
 
 The data acquired by ArduLogic is written to a VCD file that can then
 be inspected using a VCD viewer such as gtkwave. Note that you need Linux
@@ -115,9 +115,6 @@ on the bus should be captured on the positive or negative edge of SCK. The
 <ORDER> parameter must be `msb' for MSB first byte ordering or `lsb' for LSB
 first byte order. The `!' in front of CS specifies if the CS pin is inverted.
 
-Note that you can't mix multiple `decode' statements and you can't mix
-`decode' statements with `trigger' statements in the same configuration file.
-
 decode i2c <PIN-SCL> <PIN-SDA>
 ------------------------------
 
@@ -127,4 +124,7 @@ decode jtag <PIN-TCK> <PIN-TMS> <PIN-TDI> <PIN-TDO>
 ---------------------------------------------------
 
 This configures capturing and decoding a JTAG bus.
+
+Note that you can't mix multiple `decode' statements and you can't mix
+`decode' statements with `trigger' statements in the same configuration file.
 
